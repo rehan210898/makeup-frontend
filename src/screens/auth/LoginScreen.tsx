@@ -84,6 +84,14 @@ export default function LoginScreen() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    try {
+      await WebBrowser.openBrowserAsync('https://makeupocean.com/my-account/lost-password/');
+    } catch (error) {
+      Alert.alert('Error', 'Could not open password reset page');
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Welcome Back</Text>
@@ -105,7 +113,7 @@ export default function LoginScreen() {
         secureTextEntry
       />
 
-      <TouchableOpacity onPress={() => {/* TODO: Forgot Password Flow */}}>
+      <TouchableOpacity onPress={handleForgotPassword}>
         <Text style={styles.forgotPassword}>Forgot Password?</Text>
       </TouchableOpacity>
 

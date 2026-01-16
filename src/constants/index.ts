@@ -1,10 +1,12 @@
 // API Configuration
 // NOTE: Replace 'https://your-backend-app.onrender.com' with your actual deployed URL after Step 1.
 const PROD_URL = 'https://woocommerce-bff-muo.onrender.com/api/v1'; 
-const DEV_URL = 'http://192.168.2.105:3000/api/v1'; // Keep your local IP for dev
+// Ensure this IP matches your computer's IP address (ipconfig/ifconfig)
+const DEV_URL = 'http://192.168.2.105:3000/api/v1'; 
 
 export const API_CONFIG = {
-  BASE_URL: __DEV__ ? DEV_URL : PROD_URL,
+  // Force DEV_URL for now to debug
+  BASE_URL: DEV_URL, 
   API_KEY: '5aa92e6b5a9c561fff47ea95c872fc9b5c52652735029cb9fdf271eb9fc1e4fa',
   TIMEOUT: 30000,
 };
