@@ -15,6 +15,8 @@ import RefundScreen from '../screens/orders/RefundScreen';
 import WishlistScreen from '../screens/profile/WishlistScreen';
 import ProductListScreen from '../screens/products/ProductListScreen';
 import AddressScreen from '../screens/profile/AddressScreen';
+import EditProfileScreen from '../screens/profile/EditProfileScreen';
+import ChangePasswordScreen from '../screens/profile/ChangePasswordScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -62,6 +64,16 @@ export default function RootNavigator() {
         <Stack.Screen name="Refund" component={RefundScreen} />
         <Stack.Screen name="Wishlist" component={WishlistScreen} />
         <Stack.Screen name="Address" component={AddressScreen} />
+        <Stack.Screen 
+          name="EditProfile" 
+          component={EditProfileScreen} 
+          options={{ headerShown: true, title: 'Personal Details' }} 
+        />
+        <Stack.Screen 
+          name="ChangePassword" 
+          component={ChangePasswordScreen} 
+          options={{ headerShown: true, title: 'Change Password' }} 
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

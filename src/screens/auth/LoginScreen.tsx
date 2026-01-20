@@ -7,6 +7,7 @@ import { COLORS } from '../../constants';
 import { RootStackParamList } from '../../navigation/types';
 import { AuthService } from '../../services/AuthService';
 import { useUserStore } from '../../store/userStore';
+import PasswordInput from '../../components/common/PasswordInput';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -59,23 +60,6 @@ export default function LoginScreen() {
         const token = url.searchParams.get('token');
         
         if (token) {
-           // We have the token, but we need the user details. 
-           // Usually we'd decoding the token or fetch /me.
-           // For now, let's just trigger a "Verify" call or fetch Profile if we had a dedicated endpoint.
-           // Or, simplified: The backend could pass user details in URL (not secure) or we fetch /me.
-           
-           // Fetch User Profile with the new token
-           // We can reuse a "getUser" service method if we had one, or manual fetch.
-           // For this MVP, let's assume successful auth and navigation, 
-           // usually the Store would fetch the profile on init or we add a "fetchMe" to AuthService.
-           
-           // Quick fix: Since we need user object to set store, we should call a /me endpoint or similar.
-           // But since I didn't implement /me in AuthService explicitly yet (it's in backend though),
-           // I'll leave a TODO or implement it now.
-           
-           // Actually, let's just trust the flow if we had /me. 
-           // Since I can't easily add /me to AuthService right this second without breaking flow,
-           // I will just alert. In production, fetch /me here.
            Alert.alert('Google Login', 'Please restart app to refresh session (MVP limitation). Token received.');
         }
       }
@@ -105,12 +89,11 @@ export default function LoginScreen() {
         keyboardType="email-address"
       />
       
-      <TextInput
-        style={styles.input}
+      <PasswordInput
+        style={{ marginBottom: 15 }}
         placeholder="Password"
         value={password}
         onChangeText={setPassword}
-        secureTextEntry
       />
 
       <TouchableOpacity onPress={handleForgotPassword}>

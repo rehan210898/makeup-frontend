@@ -23,6 +23,8 @@ export type RootStackParamList = {
   OrderHistory: undefined;
   Wishlist: undefined;
   Address: undefined;
+  EditProfile: undefined;
+  ChangePassword: undefined;
 };
 
 declare global {

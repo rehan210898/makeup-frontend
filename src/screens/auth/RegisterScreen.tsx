@@ -16,6 +16,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { COLORS } from '../../constants';
 import { RootStackParamList } from '../../navigation/types';
 import { AuthService } from '../../services/AuthService';
+import PasswordInput from '../../components/common/PasswordInput';
 import { z } from 'zod';
 
 type RegisterScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -252,20 +253,18 @@ export default function RegisterScreen() {
            {emailStep === 3 && (
             <View>
               <Text style={styles.subtitle}>Secure your account</Text>
-              <TextInput
-                style={styles.input}
+              <PasswordInput
+                style={{ marginBottom: 15 }}
                 placeholder="Password"
                 value={formData.password}
                 onChangeText={t => setFormData({ ...formData, password: t })}
-                secureTextEntry
               />
               <Text style={styles.helperText}>Min 8 chars, 1 Uppercase, 1 Number</Text>
-              <TextInput
-                style={styles.input}
+              <PasswordInput
+                style={{ marginBottom: 15 }}
                 placeholder="Confirm Password"
                 value={formData.confirmPassword}
                 onChangeText={t => setFormData({ ...formData, confirmPassword: t })}
-                secureTextEntry
               />
               <TouchableOpacity 
                 style={styles.button} 

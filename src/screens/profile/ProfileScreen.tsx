@@ -64,6 +64,15 @@ export default function ProfileScreen() {
             <View style={styles.menu}>
               <TouchableOpacity 
                 style={styles.menuItem}
+                onPress={() => navigation.navigate('EditProfile')}
+              >
+                <Text style={styles.menuIcon}>👤</Text>
+                <Text style={styles.menuText}>Personal Details</Text>
+                <Text style={styles.menuArrow}>→</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.menuItem}
                 onPress={() => navigation.navigate('OrderHistory')}
               >
                 <Text style={styles.menuIcon}>📦</Text>
@@ -86,6 +95,15 @@ export default function ProfileScreen() {
               >
                 <Text style={styles.menuIcon}>❤️</Text>
                 <Text style={styles.menuText}>Wishlist</Text>
+                <Text style={styles.menuArrow}>→</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.menuItem}
+                onPress={() => navigation.navigate('ChangePassword')}
+              >
+                <Text style={styles.menuIcon}>🔒</Text>
+                <Text style={styles.menuText}>Change Password</Text>
                 <Text style={styles.menuArrow}>→</Text>
               </TouchableOpacity>
 
