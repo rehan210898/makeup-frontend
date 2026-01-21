@@ -6,7 +6,9 @@ import * as WebBrowser from 'expo-web-browser';
 import { COLORS } from '../../constants';
 import { RootStackParamList } from '../../navigation/types';
 import { AuthService } from '../../services/AuthService';
+import { CustomerService } from '../../services/CustomerService';
 import { useUserStore } from '../../store/userStore';
+import { User } from '../../types';
 import PasswordInput from '../../components/common/PasswordInput';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -58,9 +60,38 @@ export default function LoginScreen() {
         // Expected: muoapp://auth-callback?token=...&uId=...
         const url = new URL(result.url);
         const token = url.searchParams.get('token');
+        const uId = url.searchParams.get('uId');
         
-        if (token) {
-           Alert.alert('Google Login', 'Please restart app to refresh session (MVP limitation). Token received.');
+        if (token && uId) {
+           setLoading(true);
+           try {
+             const userData: any = await CustomerService.getProfile(parseInt(uId));
+             
+             const user: User = {
+                id: userData.id,
+                email: userData.email,
+                firstName: userData.first_name || userData.firstName || '',
+                lastName: userData.last_name || userData.lastName || '',
+                username: userData.username,
+                avatar: userData.avatar_url,
+                billing: userData.billing,
+                shipping: userData.shipping
+             };
+
+             setUser(user, token);
+             Alert.alert('Success', `Welcome back, ${user.firstName}!`);
+             navigation.reset({
+                 index: 0,
+                 routes: [{ name: 'MainTabs' }],
+             });
+           } catch (err) {
+             console.error('Google Login Error:', err);
+             Alert.alert('Error', 'Failed to retrieve user data.');
+           } finally {
+             setLoading(false);
+           }
+        } else {
+           Alert.alert('Error', 'Invalid response from Google Login.');
         }
       }
     } catch (error) {
