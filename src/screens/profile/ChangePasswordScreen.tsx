@@ -21,7 +21,12 @@ export default function ChangePasswordScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
-    if (!user?.id) return;
+    console.log('Update Password Attempt:', user);
+
+    if (!user || !user.id) {
+        Alert.alert('Error', 'User session invalid. Please login again.');
+        return;
+    }
     
     if (!password || !confirmPassword) {
       Alert.alert('Error', 'Please fill all fields');
