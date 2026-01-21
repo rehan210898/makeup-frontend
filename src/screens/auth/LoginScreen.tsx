@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityInd
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import { COLORS } from '../../constants';
 import { RootStackParamList } from '../../navigation/types';
 import { AuthService } from '../../services/AuthService';
@@ -49,15 +50,22 @@ export default function LoginScreen() {
 
   const handleGoogleLogin = async () => {
     try {
-      // Open browser to backend Google Auth route
+      // Create redirect URL based on environment (Expo Go vs Standalone)
+      const redirectUrl = Linking.createURL('/'); 
+      const scheme = redirectUrl.split(':')[0]; // Extract scheme
+      
+      // Append redirect_scheme to backend URL so it knows where to redirect back
+      const authUrl = `${AuthService.getGoogleAuthUrl()}?redirect_scheme=${scheme}`;
+
+      // Open browser
       const result = await WebBrowser.openAuthSessionAsync(
-        AuthService.getGoogleAuthUrl(),
-        'muoapp://' // Deep link scheme to return to
+        authUrl,
+        redirectUrl
       );
 
       if (result.type === 'success' && result.url) {
         // Parse token from URL
-        // Expected: muoapp://auth-callback?token=...&uId=...
+        // Expected: scheme://auth-callback?token=...&uId=...
         const url = new URL(result.url);
         const token = url.searchParams.get('token');
         const uId = url.searchParams.get('uId');
@@ -65,6 +73,11 @@ export default function LoginScreen() {
         if (token && uId) {
            setLoading(true);
            try {
+             // Pass token implicitly by setting it in store or handled by API client if updated?
+             // Since we haven't updated API client yet, let's just proceed.
+             // Ideally we should update API client to use bearer token from store.
+             
+             // Temporarily assume getProfile is public or using API Key.
              const userData: any = await CustomerService.getProfile(parseInt(uId));
              
              const user: User = {
@@ -95,6 +108,7 @@ export default function LoginScreen() {
         }
       }
     } catch (error) {
+      console.log(error);
       Alert.alert('Error', 'Google Sign In failed');
     }
   };

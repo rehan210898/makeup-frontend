@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import { API_CONFIG } from '../constants';
+import { useUserStore } from '../store/userStore';
 
 class ApiClient {
   private client: AxiosInstance;
@@ -25,6 +26,13 @@ class ApiClient {
         if (API_CONFIG.API_KEY) {
           config.headers['X-API-Key'] = API_CONFIG.API_KEY;
         }
+        
+        // Add Bearer Token from Store
+        const token = useUserStore.getState().token;
+        if (token) {
+          config.headers['Authorization'] = `Bearer ${token}`;
+        }
+
         if (this.nonce) {
             config.headers['X-WC-Store-API-Nonce'] = this.nonce;
         }
