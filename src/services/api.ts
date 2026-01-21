@@ -91,6 +91,11 @@ class ApiClient {
     return response.data;
   }
 
+  async put<T>(url: string, data?: any, config?: any): Promise<T> {
+    const response = await this.client.put(url, data, config);
+    return response.data;
+  }
+
   async delete<T>(url: string, config?: any): Promise<T> {
     const response = await this.client.delete(url, config);
     return response.data;
