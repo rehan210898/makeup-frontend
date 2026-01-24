@@ -6,9 +6,13 @@
     "start": "expo start --port 8082",
     "android": "expo start --android --port 8082",
     "ios": "expo start --ios --port 8082",
-    "web": "expo start --web --port 8082"
+    "web": "expo start --web --port 8082",
+    "build:android:preview": "eas build -p android --profile preview",
+    "build:android:prod": "eas build -p android --profile production",
+    "build:ios:prod": "eas build -p ios --profile production"
   },
   "dependencies": {
+    "@expo/vector-icons": "^14.0.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/bottom-tabs": "^7.4.9",
     "@react-navigation/native": "^7.1.18",
@@ -20,7 +24,6 @@
     "expo-linking": "^8.0.11",
     "expo-status-bar": "~3.0.8",
     "expo-web-browser": "^15.0.10",
-    "@expo/vector-icons": "^14.0.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.4",
@@ -40,6 +43,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
+    "babel-plugin-transform-remove-console": "^6.9.4",
     "babel-preset-expo": "^54.0.9",
     "baseline-browser-mapping": "^2.9.11",
     "typescript": "~5.9.2"

@@ -6,6 +6,7 @@ import productService from '../../services/productService';
 import categoryService from '../../services/categoryService';
 import { Product } from '../../types';
 import ProductCard from '../products/ProductCard';
+import { ProductCardSkeleton } from '../skeletons/ProductCardSkeleton';
 
 interface ProductSliderSectionProps {
   title?: string;
@@ -15,20 +16,21 @@ interface ProductSliderSectionProps {
     ids?: number[];
     value?: string | number;
   };
+  images?: string[];
 }
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width / 2) - 20;
 const GAP = 20;
 
-export const ProductSliderSection: React.FC<ProductSliderSectionProps> = ({ title, dataSource }) => {
+export const ProductSliderSection: React.FC<ProductSliderSectionProps> = ({ title, dataSource, images }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation<any>();
 
   useEffect(() => {
     loadProducts();
-  }, [dataSource]);
+  }, [dataSource, images]);
 
   const loadProducts = async () => {
     if (!dataSource) {
@@ -37,12 +39,33 @@ export const ProductSliderSection: React.FC<ProductSliderSectionProps> = ({ titl
     }
 
     try {
-      let response;
+      let response: any;
       if (dataSource.type === 'ids' && dataSource.ids?.length) {
         response = await productService.getProducts({ 
           // @ts-ignore
           include: dataSource.ids 
         });
+
+        // Apply Image Overrides and Sort by ID order
+        if (response && response.data && images && images.length > 0) {
+            const ids = dataSource.ids;
+            
+            // 1. Sort to match ID order
+            const sorted = response.data.sort((a: any, b: any) => ids.indexOf(a.id) - ids.indexOf(b.id));
+            
+            // 2. Override images
+            response.data = sorted.map((p: any) => {
+                const originalIndex = ids.indexOf(p.id);
+                if (originalIndex !== -1 && images[originalIndex]) {
+                    return {
+                        ...p,
+                        images: [{ src: images[originalIndex] }] // Override main image
+                    };
+                }
+                return p;
+            });
+        }
+
       } else if (dataSource.type === 'filter') {
         const filters: any = { per_page: 6 }; // Fetch fewer for carousel
         if (dataSource.key === 'popularity') {
@@ -92,7 +115,27 @@ export const ProductSliderSection: React.FC<ProductSliderSectionProps> = ({ titl
     navigation.navigate('ProductDetail', { productId: id });
   };
 
-  if (loading) return <View style={styles.loading}><ActivityIndicator color={COLORS.primary} /></View>;
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        {title ? (
+            <View style={styles.header}>
+                <Text style={styles.title}>{title}</Text>
+            </View>
+        ) : null}
+        <FlatList
+            horizontal
+            data={[1, 2, 3]}
+            keyExtractor={(item) => item.toString()}
+            renderItem={() => <ProductCardSkeleton />}
+            contentContainerStyle={styles.listContent}
+            ItemSeparatorComponent={() => <View style={{ width: GAP }} />}
+            showsHorizontalScrollIndicator={false}
+        />
+      </View>
+    );
+  }
+
   if (!products.length) return null;
 
   return (
@@ -110,6 +153,7 @@ export const ProductSliderSection: React.FC<ProductSliderSectionProps> = ({ titl
           <ProductCard 
             item={item} 
             onPress={handleProductPress}
+            hidePrice={!!images && images.length > 0}
           />
         )}
         contentContainerStyle={styles.listContent}

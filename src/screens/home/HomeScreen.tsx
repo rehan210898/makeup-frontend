@@ -11,6 +11,10 @@ import { HomeLayoutSection } from '../../types';
 import { BannerSection } from '../../components/home/BannerSection';
 import { ProductSliderSection } from '../../components/home/ProductSliderSection';
 import { CategoryGridSection } from '../../components/home/CategoryGridSection';
+import { FashionMicroAnimations } from '../../components/home/FashionMicroAnimations';
+import { BeautyMicroAnimations } from '../../components/home/BeautyMicroAnimations';
+import { FloatingIconsBackground } from '../../components/home/FloatingIconsBackground';
+import { HomeSkeleton } from '../../components/skeletons/HomeSkeleton';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -49,6 +53,10 @@ export default function HomeScreen() {
           imageUrl={(item.data as any).imageUrl || ''} 
           action={(item.data as any).action} 
         />;
+      case 'micro_animation':
+        return <FashionMicroAnimations />;
+      case 'beauty_animation':
+        return <BeautyMicroAnimations />;
       case 'section_title':
         return (
           <View style={{ paddingHorizontal: 20, marginBottom: 15, marginTop: 10 }}>
@@ -64,8 +72,12 @@ export default function HomeScreen() {
         
         let dataSource: any = { type: 'filter', key: 'date' }; // Default to latest
         
-        if (queryType === 'ids' && apiParams.include) {
-          dataSource = { type: 'ids', ids: apiParams.include };
+        if (queryType === 'ids') {
+          if (listData.ids) {
+            dataSource = { type: 'ids', ids: listData.ids };
+          } else if (apiParams.include) {
+            dataSource = { type: 'ids', ids: apiParams.include };
+          }
         } else if (queryType === 'category' && apiParams.category) {
           dataSource = { type: 'filter', key: 'category', value: apiParams.category };
         } else if (queryType === 'best_selling') {
@@ -79,10 +91,10 @@ export default function HomeScreen() {
         }
         
         // Pass item.title if available
-        return <ProductSliderSection title={item.title || 'Products'} dataSource={dataSource} />;
+        return <ProductSliderSection title={item.title || 'Products'} dataSource={dataSource} images={listData.images} />;
       case 'category_grid':
         const gridData = item.data as any;
-        return <CategoryGridSection title={item.title || 'Categories'} categories={gridData.ids} />;
+        return <CategoryGridSection title={item.title || 'Categories'} categories={gridData.ids} images={gridData.images} />;
       default:
         return null;
     }
@@ -99,6 +111,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      <FloatingIconsBackground />
       {/* Header - Fixed at top */}
       <View style={[styles.header, { backgroundColor: COLORS.primary }]}>
         <View style={styles.headerTopRow}>
@@ -120,9 +133,7 @@ export default function HomeScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-        </View>
+        <HomeSkeleton />
       ) : (
         <FlatList
           data={layout}

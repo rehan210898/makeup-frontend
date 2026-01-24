@@ -8,7 +8,9 @@ interface BannerSectionProps {
   imageUrl: string;
   action?: {
     type: string;
-    target_id: number;
+    value: string | number;
+    title?: string;
+    target_id?: number; // Keep for backward compatibility if any
   };
 }
 
@@ -19,13 +21,17 @@ export const BannerSection: React.FC<BannerSectionProps> = ({ imageUrl, action }
     if (!action) return;
 
     if (action.type === 'category') {
-      // Navigate to Category/ProductList with category filter
       navigation.navigate('ProductList', { 
-        categoryId: action.target_id, 
-        // categoryName: action.name 
+        categoryId: Number(action.value || action.target_id), 
+        categoryName: action.title 
+      });
+    } else if (action.type === 'filter') {
+      navigation.navigate('ProductList', { 
+        type: action.value,
+        title: action.title 
       });
     } else if (action.type === 'product') {
-      navigation.navigate('ProductDetail', { productId: action.target_id });
+      navigation.navigate('ProductDetail', { productId: Number(action.value || action.target_id) });
     }
   };
 
@@ -35,29 +41,35 @@ export const BannerSection: React.FC<BannerSectionProps> = ({ imageUrl, action }
       onPress={handlePress}
       activeOpacity={0.9}
     >
-      <Image
-        source={{ uri: imageUrl }}
-        style={styles.image}
-        contentFit="cover"
-        transition={300}
-      />
+      <View style={styles.card}>
+        <Image
+          source={{ uri: imageUrl }}
+          style={styles.image}
+          contentFit="cover"
+          transition={300}
+        />
+      </View>
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    marginHorizontal: 20,
+    width: '100%',
+    paddingHorizontal: 20,
     marginBottom: 20,
+  },
+  card: {
+    width: '100%',
+    aspectRatio: 16/9,
     borderRadius: 16,
     overflow: 'hidden',
+    backgroundColor: COLORS.white,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-    backgroundColor: COLORS.white,
-    aspectRatio: 16/9,
   },
   image: {
     width: '100%',

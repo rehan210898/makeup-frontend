@@ -14,9 +14,10 @@ interface ProductCardProps {
   onPress: (id: number) => void;
   onWishlistPress?: (product: Product) => void;
   isWishlisted?: boolean;
+  hidePrice?: boolean;
 }
 
-const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false }: ProductCardProps) => {
+const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false, hidePrice = false }: ProductCardProps) => {
   const inStock = item.inStock ?? true;
   
   const regularPriceVal = item.regularPrice ? parseFloat(item.regularPrice) : 0;
@@ -45,13 +46,13 @@ const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false }: P
           transition={300}
         />
         
-        {rating > 3 && (
+        {!hidePrice && rating > 3 && (
             <View style={styles.ratingBadge}>
                 <Text style={styles.ratingText}>{rating.toFixed(1)} ★</Text>
             </View>
         )}
 
-        {onWishlistPress && (
+        {!hidePrice && onWishlistPress && (
           <TouchableOpacity 
             style={styles.wishlistBtn}
             onPress={(e) => {
@@ -63,13 +64,14 @@ const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false }: P
           </TouchableOpacity>
         )}
 
-        {!inStock && (
+        {!hidePrice && !inStock && (
             <View style={styles.outOfStockBadge}>
                 <Text style={styles.outOfStockText}>Out of Stock</Text>
             </View>
         )}
       </View>
 
+      {!hidePrice && (
       <View style={styles.details}>
         <Text style={styles.name} numberOfLines={2}>{item.name}</Text>
         
@@ -95,6 +97,7 @@ const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false }: P
           )}
         </View>
       </View>
+      )}
     </TouchableOpacity>
   );
 };

@@ -14,6 +14,7 @@ import HeartIcon from '../../components/icons/HeartIcon';
 import ProductCard from '../../components/products/ProductCard';
 import ArrowLeftIcon from '../../components/icons/ArrowLeftIcon';
 import FilterIcon from '../../components/icons/FilterIcon';
+import { ProductListSkeleton } from '../../components/skeletons/ProductListSkeleton';
 
 type ProductListRouteProp = RouteProp<RootStackParamList, 'ProductList'>;
 type ProductListNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -436,9 +437,7 @@ export default function ProductListScreen() {
       </Animated.View>
 
       {loading && !loadingMore ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-        </View>
+        <ProductListSkeleton />
       ) : (
         <Animated.FlatList
           data={products}

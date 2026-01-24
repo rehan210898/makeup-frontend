@@ -9,15 +9,16 @@ import { Category } from '../../types';
 interface CategoryGridSectionProps {
   title: string;
   categories?: number[];
+  images?: string[];
 }
 
-export const CategoryGridSection: React.FC<CategoryGridSectionProps> = ({ title, categories: categoryIds }) => {
+export const CategoryGridSection: React.FC<CategoryGridSectionProps> = ({ title, categories: categoryIds, images }) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const navigation = useNavigation<any>();
 
   useEffect(() => {
     loadCategories();
-  }, []);
+  }, [categoryIds, images]); // Reload if ids or images change
 
   const loadCategories = async () => {
     try {
@@ -25,7 +26,26 @@ export const CategoryGridSection: React.FC<CategoryGridSectionProps> = ({ title,
       let loadedCats = response.data || [];
       
       if (categoryIds && categoryIds.length > 0) {
+        // 1. Filter to get only requested categories
         loadedCats = loadedCats.filter(c => categoryIds.includes(c.id));
+        
+        // 2. Sort them to match the order in categoryIds
+        loadedCats.sort((a, b) => {
+          return categoryIds.indexOf(a.id) - categoryIds.indexOf(b.id);
+        });
+
+        // 3. Apply override images if provided
+        if (images && images.length > 0) {
+          loadedCats = loadedCats.map((cat, index) => {
+            if (images[index]) {
+              return {
+                ...cat,
+                image: images[index] // Override with the static image URL
+              };
+            }
+            return cat;
+          });
+        }
       } else {
         // If no IDs provided, maybe just show top 4?
         loadedCats = loadedCats.slice(0, 8);
@@ -43,6 +63,27 @@ export const CategoryGridSection: React.FC<CategoryGridSectionProps> = ({ title,
     });
   };
 
+  const renderItem = ({ item }: { item: Category }) => (
+    <TouchableOpacity 
+      style={styles.item}
+      onPress={() => handlePress(item)}
+    >
+      <View style={styles.imageContainer}>
+       {/* Use image if available, else placeholder */}
+       {item.image ? (
+          <Image
+            source={{ uri: typeof item.image === 'string' ? item.image : item.image.src }}
+            style={styles.image}
+            contentFit="cover"
+          />
+       ) : (
+         <View style={styles.placeholder} />
+       )}
+      </View>
+      <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
+    </TouchableOpacity>
+  );
+
   if (!categories.length) return null;
 
   return (
@@ -50,29 +91,15 @@ export const CategoryGridSection: React.FC<CategoryGridSectionProps> = ({ title,
       <View style={styles.header}>
         <Text style={styles.title}>{title}</Text>
       </View>
-      <View style={styles.grid}>
-        {categories.map((item) => (
-          <TouchableOpacity 
-            key={item.id} 
-            style={styles.item}
-            onPress={() => handlePress(item)}
-          >
-            <View style={styles.imageContainer}>
-             {/* Use image if available, else placeholder */}
-             {item.image ? (
-                <Image
-                  source={{ uri: typeof item.image === 'string' ? item.image : item.image.src }}
-                  style={styles.image}
-                  contentFit="cover"
-                />
-             ) : (
-               <View style={styles.placeholder} />
-             )}
-            </View>
-            <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <FlatList
+        data={categories}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id.toString()}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.listContent}
+        ItemSeparatorComponent={() => <View style={{ width: 15 }} />}
+      />
     </View>
   );
 };
@@ -80,9 +107,9 @@ export const CategoryGridSection: React.FC<CategoryGridSectionProps> = ({ title,
 const styles = StyleSheet.create({
   container: {
     marginBottom: 20,
-    paddingHorizontal: 20,
   },
   header: {
+    paddingHorizontal: 20,
     marginBottom: 15,
   },
   title: {
@@ -90,20 +117,17 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.primary,
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+  listContent: {
+    paddingHorizontal: 20,
   },
   item: {
-    width: '23%', // 4 columns
-    marginBottom: 15,
+    width: 80,
     alignItems: 'center',
   },
   imageContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     backgroundColor: '#F5F5F5',
     marginBottom: 8,
     overflow: 'hidden',
