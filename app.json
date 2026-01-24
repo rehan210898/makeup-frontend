@@ -31,6 +31,20 @@
     "web": {
       "favicon": "./assets/logo.png"
     },
+    "notification": {
+      "icon": "./assets/logo.png",
+      "color": "#661F1D"
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/logo.png",
+          "color": "#661F1D"
+        }
+      ],
+      "expo-secure-store"
+    ],
     "scheme": "muoapp",
     "extra": {
       "eas": {

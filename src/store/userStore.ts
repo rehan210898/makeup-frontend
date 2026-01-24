@@ -1,18 +1,12 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SecureStorageAdapter } from '../utils/SecureStorageAdapter';
 import { User, SavedAddress } from '../types';
 
 interface UserState {
   user: User | null;
   token: string | null;
-  isAuthenticated: boolean;
-  setUser: (user: User, token: string) => void;
-  logout: () => void;
-  updateUser: (user: Partial<User>) => void;
-  addAddress: (address: SavedAddress) => void;
-  removeAddress: (id: string) => void;
-}
+// ... (rest of interface)
 
 export const useUserStore = create<UserState>()(
   persist(
@@ -59,8 +53,8 @@ export const useUserStore = create<UserState>()(
       }),
     }),
     {
-      name: 'user-storage',
-      storage: createJSONStorage(() => AsyncStorage),
+      name: 'user-storage-secure', // Changed name to avoid conflicts with old AsyncStorage data
+      storage: createJSONStorage(() => SecureStorageAdapter),
     }
   )
 );

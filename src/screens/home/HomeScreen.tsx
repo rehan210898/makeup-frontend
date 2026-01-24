@@ -92,9 +92,17 @@ export default function HomeScreen() {
         
         // Pass item.title if available
         return <ProductSliderSection title={item.title || 'Products'} dataSource={dataSource} images={listData.images} />;
+import { CategoryGridSection } from '../../components/home/CategoryGridSection';
+import { BrandGridSection } from '../../components/home/BrandGridSection';
+import { FashionMicroAnimations } from '../../components/home/FashionMicroAnimations';
+
+// ... (inside renderSection switch)
       case 'category_grid':
         const gridData = item.data as any;
         return <CategoryGridSection title={item.title || 'Categories'} categories={gridData.ids} images={gridData.images} />;
+      case 'brand_grid':
+        const brandData = item.data as any;
+        return <BrandGridSection title={item.title || 'Top Brands'} ids={brandData.ids} images={brandData.images} />;
       default:
         return null;
     }
