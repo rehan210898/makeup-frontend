@@ -21,7 +21,16 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { setUser } = useUserStore();
+  const { setUser, isAuthenticated } = useUserStore();
+
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'MainTabs' }],
+      });
+    }
+  }, [isAuthenticated, navigation]);
 
   const handleLogin = async () => {
     if (!email || !password) {
