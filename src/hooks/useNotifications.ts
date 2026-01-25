@@ -8,8 +8,8 @@ export const useNotifications = () => {
   const [expoPushToken, setExpoPushToken] = useState<string | undefined>('');
   const [notification, setNotification] = useState<Notifications.Notification | null>(null);
   
-  const notificationListener = useRef<Notifications.Subscription>();
-  const responseListener = useRef<Notifications.Subscription>();
+  const notificationListener = useRef<Notifications.Subscription | undefined>(undefined);
+  const responseListener = useRef<Notifications.Subscription | undefined>(undefined);
 
   useEffect(() => {
     // 1. Register for push notifications on mount
@@ -27,7 +27,7 @@ export const useNotifications = () => {
 
     // 3. Listen for user interaction (tapping the notification)
     responseListener.current = NotificationService.addNotificationResponseReceivedListener(response => {
-      const data = response.notification.request.content.data as NotificationPayload;
+      const data = response.notification.request.content.data as unknown as NotificationPayload;
       console.log('Notification Data:', data);
 
       // Handle Deep Linking via 'click_action' or construct it from data

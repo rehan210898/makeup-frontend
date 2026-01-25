@@ -28,7 +28,7 @@ const PRODUCT_ITEM_HEIGHT = 320;
 export default function ProductListScreen() {
   const route = useRoute<ProductListRouteProp>();
   const navigation = useNavigation<ProductListNavigationProp>();
-  const { categoryId, categoryName, search: initialSearch } = route.params || {};
+  const { categoryId, categoryName, search: initialSearch, attribute, termId, title } = route.params || {};
 
   const [products, setProducts] = useState<Product[]>([]);
 
@@ -44,9 +44,12 @@ export default function ProductListScreen() {
   const [filterModalVisible, setFilterModalVisible] = useState(false);
 
   // Filter State
-  const [selectedFilters, setSelectedFilters] = useState<Record<string, number[]>>(
-    categoryId ? { 'category': [categoryId] } : {}
-  ); 
+  const [selectedFilters, setSelectedFilters] = useState<Record<string, number[]>>(() => {
+    const filters: Record<string, number[]> = {};
+    if (categoryId) filters['category'] = [categoryId];
+    if (attribute && termId) filters[attribute] = [termId];
+    return filters;
+  }); 
   const [tempFilters, setTempFilters] = useState<Record<string, number[]>>({});
   
   // Price Filter State
@@ -79,6 +82,23 @@ export default function ProductListScreen() {
     navigation.setOptions({ headerShown: false }); // Hide default header
     loadProducts(1, true);
   }, [activeCategoryId, activeSort]); // Re-run when category or sort changes. Search triggers loadProducts manually.
+
+  // Load attributes if initial attribute filter is present so chips show up
+  useEffect(() => {
+    if (attribute) {
+      loadAttributes();
+    }
+  }, [attribute]);
+
+  // Load terms for the specific attribute once attributes are loaded
+  useEffect(() => {
+    if (attribute && attributes.length > 0) {
+      const attr = attributes.find(a => a.slug === attribute);
+      if (attr && !attributeTerms[attr.id]) {
+        loadTerms(attr.id);
+      }
+    }
+  }, [attributes, attribute]);
 
   useEffect(() => {
     if (filterModalVisible) {

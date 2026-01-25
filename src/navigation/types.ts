@@ -12,7 +12,7 @@ export type BottomTabParamList = {
 export type RootStackParamList = {
   MainTabs: NavigatorScreenParams<BottomTabParamList>;
   ProductDetail: { productId: number };
-  ProductList: { categoryId?: number; categoryName?: string; search?: string };
+  ProductList: { categoryId?: number; categoryName?: string; search?: string; attribute?: string; termId?: number; title?: string };
   Checkout: undefined;
   OrderConfirmation: { orderId: number };
   OrderTracking: { orderId: number; fromCheckout?: boolean };

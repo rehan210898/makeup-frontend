@@ -20,7 +20,17 @@ const SPARKLE_PATH = "M12 0L15 9L24 12L15 15L12 24L9 15L0 12L9 9L12 0Z";
 
 const AnimatedSvg = Animated.createAnimatedComponent(Svg);
 
-const FloatingIcon = ({ path, color, size, startX, startY, delay, duration }) => {
+interface FloatingIconProps {
+  path: string;
+  color: string;
+  size: number;
+  startX: number;
+  startY: number;
+  delay: number;
+  duration: number;
+}
+
+const FloatingIcon = ({ path, color, size, startX, startY, delay, duration }: FloatingIconProps) => {
   const translateY = useSharedValue(0);
   const opacity = useSharedValue(0);
 

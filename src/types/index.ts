@@ -415,8 +415,8 @@ export interface SectionTitleData {
 }
 
 export interface HomeLayoutSection {
-  type: 'hero_banner' | 'section_title' | 'product_list' | 'category_grid';
+  type: 'hero_banner' | 'section_title' | 'product_list' | 'category_grid' | 'micro_animation' | 'beauty_animation' | 'brand_grid';
   title?: string;
-  data: HeroBannerData | ProductListData | SectionTitleData | CategoryGridData;
+  data: HeroBannerData | ProductListData | SectionTitleData | CategoryGridData | any;
   id?: string | number;
 }

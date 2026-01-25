@@ -13,6 +13,7 @@ import { ProductSliderSection } from '../../components/home/ProductSliderSection
 import { CategoryGridSection } from '../../components/home/CategoryGridSection';
 import { FashionMicroAnimations } from '../../components/home/FashionMicroAnimations';
 import { BeautyMicroAnimations } from '../../components/home/BeautyMicroAnimations';
+import { BrandGridSection } from '../../components/home/BrandGridSection';
 import { FloatingIconsBackground } from '../../components/home/FloatingIconsBackground';
 import { HomeSkeleton } from '../../components/skeletons/HomeSkeleton';
 
@@ -92,11 +93,6 @@ export default function HomeScreen() {
         
         // Pass item.title if available
         return <ProductSliderSection title={item.title || 'Products'} dataSource={dataSource} images={listData.images} />;
-import { CategoryGridSection } from '../../components/home/CategoryGridSection';
-import { BrandGridSection } from '../../components/home/BrandGridSection';
-import { FashionMicroAnimations } from '../../components/home/FashionMicroAnimations';
-
-// ... (inside renderSection switch)
       case 'category_grid':
         const gridData = item.data as any;
         return <CategoryGridSection title={item.title || 'Categories'} categories={gridData.ids} images={gridData.images} />;

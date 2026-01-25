@@ -10,6 +10,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -129,7 +131,7 @@ class NotificationService {
    * Remove specific listener
    */
   removeSubscription(subscription: Notifications.Subscription) {
-    Notifications.removeNotificationSubscription(subscription);
+    subscription.remove();
   }
 }
 

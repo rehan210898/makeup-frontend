@@ -6,7 +6,13 @@ import { User, SavedAddress } from '../types';
 interface UserState {
   user: User | null;
   token: string | null;
-// ... (rest of interface)
+  isAuthenticated: boolean;
+  setUser: (user: User, token: string) => void;
+  logout: () => void;
+  updateUser: (updatedUser: Partial<User>) => void;
+  addAddress: (address: SavedAddress) => void;
+  removeAddress: (id: string) => void;
+}
 
 export const useUserStore = create<UserState>()(
   persist(
