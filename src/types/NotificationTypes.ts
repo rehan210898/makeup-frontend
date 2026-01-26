@@ -32,6 +32,7 @@ export interface PromotionNotificationData extends BaseNotificationData {
   type: 'PROMOTION';
   code?: string;
   url?: string;
+  link?: string;
 }
 
 export type NotificationPayload = 

@@ -33,8 +33,10 @@ export const useNotifications = () => {
       // Handle Deep Linking via 'click_action' or construct it from data
       if (data.click_action) {
         Linking.openURL(data.click_action);
+      } else if (data.type === 'PROMOTION' && (data as any).link) {
+        Linking.openURL(Linking.createURL((data as any).link));
       } else if (data.type === 'ORDER_UPDATE' || data.type === 'ORDER_CONFIRMATION') {
-        if (data.orderId) {
+        if ('orderId' in data && data.orderId) {
             Linking.openURL(Linking.createURL(`orders/${data.orderId}`));
         }
       }
