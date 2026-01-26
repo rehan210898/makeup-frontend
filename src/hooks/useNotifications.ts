@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
 import * as Linking from 'expo-linking';
+import Constants from 'expo-constants';
 import NotificationService from '../services/NotificationService';
 import { NotificationPayload } from '../types/NotificationTypes';
 
@@ -12,6 +13,12 @@ export const useNotifications = () => {
   const responseListener = useRef<Notifications.Subscription | undefined>(undefined);
 
   useEffect(() => {
+    // Check if running in Expo Go
+    if (Constants.appOwnership === 'expo') {
+      console.log('⚠️ Push Notifications disabled in Expo Go');
+      return;
+    }
+
     // 1. Register for push notifications on mount
     NotificationService.registerForPushNotificationsAsync().then(token => {
       setExpoPushToken(token);

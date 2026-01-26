@@ -1,10 +1,14 @@
 import axios from 'axios';
 import { Platform, NativeModules, Alert } from 'react-native';
+import Constants from 'expo-constants';
 import { API_CONFIG } from '../constants';
 import { z } from 'zod';
 
 let RazorpayCheckout: any = null;
-if (Platform.OS !== 'web') {
+// distinct check for Expo Go to avoid NativeEventEmitter crash on import
+const isExpoGo = Constants.appOwnership === 'expo';
+
+if (Platform.OS !== 'web' && !isExpoGo) {
     try {
         RazorpayCheckout = require('react-native-razorpay').default;
     } catch (err) {

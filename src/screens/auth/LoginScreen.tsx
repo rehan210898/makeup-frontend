@@ -18,7 +18,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const navigation = useNavigation<LoginScreenNavigationProp>();
-  const [email, setEmail] = useState('');
+  const [loginInput, setLoginInput] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { setUser, isAuthenticated } = useUserStore();
@@ -33,14 +33,14 @@ export default function LoginScreen() {
   }, [isAuthenticated, navigation]);
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please enter email and password');
+    if (!loginInput || !password) {
+      Alert.alert('Error', 'Please enter email/username and password');
       return;
     }
 
     setLoading(true);
     try {
-      const data = await AuthService.login({ email, password });
+      const data = await AuthService.login({ login: loginInput, password });
       
       if (data.success) {
         setUser(data.user, data.token);
@@ -136,11 +136,10 @@ export default function LoginScreen() {
       
       <TextInput
         style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
+        placeholder="Email or Username"
+        value={loginInput}
+        onChangeText={setLoginInput}
         autoCapitalize="none"
-        keyboardType="email-address"
       />
       
       <PasswordInput

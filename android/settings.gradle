@@ -31,7 +31,7 @@ extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
 }
 expoAutolinking.useExpoModules()
 
-rootProject.name = 'ecommerce-mobile-app'
+rootProject.name = 'MakeupOcean'
 
 expoAutolinking.useExpoVersionCatalog()
 

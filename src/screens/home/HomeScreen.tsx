@@ -17,6 +17,7 @@ import { BeautyMicroAnimations } from '../../components/home/BeautyMicroAnimatio
 import { BrandGridSection } from '../../components/home/BrandGridSection';
 import { FloatingIconsBackground } from '../../components/home/FloatingIconsBackground';
 import { HomeSkeleton } from '../../components/skeletons/HomeSkeleton';
+import { ProductCardSkeleton } from '../../components/skeletons/ProductCardSkeleton';
 import { GlassView } from '../../components/common/GlassView';
 import ProductCard from '../../components/products/ProductCard';
 
@@ -25,8 +26,13 @@ type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 const { width } = Dimensions.get('window');
 const COLUMN_WIDTH = (width - 50) / 2;
 
+const PRODUCT_ROW_HEIGHT = 320;
+const SECTION_EST_HEIGHT = 400;
+const TITLE_HEIGHT = 80; // Title + margins
+
 export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
+  // ... state ...
   const [layout, setLayout] = useState<HomeLayoutSection[]>([]);
   const [popularProducts, setPopularProducts] = useState<Product[]>([]);
   const [page, setPage] = useState(1);
@@ -36,6 +42,7 @@ export default function HomeScreen() {
   const [hasMore, setHasMore] = useState(true);
   const { itemCount } = useCartStore();
 
+  // ... load functions ...
   const loadLayout = async () => {
     try {
       const data = await layoutService.getHomeLayout();
@@ -118,10 +125,37 @@ export default function HomeScreen() {
     return data;
   }, [layout, popularProducts]);
 
-  const renderItem = ({ item }: { item: any }) => {
+  const handleProductPress = (productId: number) => {
+    navigation.navigate('ProductDetail', { productId });
+  };
+  
+  const getItemLayout = useCallback((data: any, index: number) => {
+    const layoutCount = layout.length;
+    let length = 0;
+    let offset = 0;
+
+    if (index < layoutCount) {
+        // Sections (Approximate)
+        length = SECTION_EST_HEIGHT;
+        offset = index * SECTION_EST_HEIGHT;
+    } else if (index === layoutCount) {
+        // Title
+        length = TITLE_HEIGHT;
+        offset = layoutCount * SECTION_EST_HEIGHT;
+    } else {
+        // Product Rows
+        length = PRODUCT_ROW_HEIGHT;
+        // Offset = (All Sections) + Title + (Previous Rows)
+        offset = (layoutCount * SECTION_EST_HEIGHT) + TITLE_HEIGHT + ((index - (layoutCount + 1)) * PRODUCT_ROW_HEIGHT);
+    }
+    
+    return { length, offset, index };
+  }, [layout.length]);
+
+  const renderItem = useCallback(({ item }: { item: any }) => {
     if (item.isTitle) {
       return (
-        <View style={{ paddingHorizontal: 20, marginBottom: 15, marginTop: 25 }}>
+        <View style={{ paddingHorizontal: 20, marginBottom: 15, marginTop: 25, height: TITLE_HEIGHT - 40 }}>
           <Text style={{ fontSize: 22, fontWeight: 'bold', color: COLORS.primary }}>
             {item.title}
           </Text>
@@ -131,10 +165,13 @@ export default function HomeScreen() {
 
     if (item.isProductRow) {
       return (
-        <View style={styles.productRow}>
+        <View style={[styles.productRow, { height: PRODUCT_ROW_HEIGHT }]}>
           {item.products.map((product: Product) => (
             <View key={product.id} style={{ width: COLUMN_WIDTH }}>
-              <ProductCard product={product} />
+              <ProductCard 
+                item={product} 
+                onPress={handleProductPress}
+              />
             </View>
           ))}
         </View>
@@ -142,6 +179,7 @@ export default function HomeScreen() {
     }
 
     if (item.isSection) {
+        // ... switch case ...
         switch (item.type) {
         case 'hero_banner':
             return <BannerSection 
@@ -198,22 +236,18 @@ export default function HomeScreen() {
     }
 
     return null;
-  };
-
-  const renderHeader = () => (
-    <View style={styles.welcomeContainer}>
-       <GlassView style={styles.welcomeBox}>
-        <Text style={styles.welcomeTitle}>Welcome Back! 👋</Text>
-        <Text style={styles.welcomeText}>Discover amazing products</Text>
-      </GlassView>
-    </View>
-  );
+  }, [handleProductPress]);
 
   const renderFooter = () => {
     if (!loadingMore) return null;
     return (
-      <View style={{ paddingVertical: 20 }}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 15 }}>
+         <View style={{ width: COLUMN_WIDTH }}>
+            <ProductCardSkeleton variant="home" />
+         </View>
+         <View style={{ width: COLUMN_WIDTH }}>
+            <ProductCardSkeleton variant="home" />
+         </View>
       </View>
     );
   };
@@ -246,7 +280,6 @@ export default function HomeScreen() {
           data={flatListData}
           renderItem={renderItem}
           keyExtractor={(item, index) => index.toString()}
-          ListHeaderComponent={renderHeader}
           ListFooterComponent={renderFooter}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
@@ -255,10 +288,11 @@ export default function HomeScreen() {
           }
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
-          initialNumToRender={5}
-          maxToRenderPerBatch={5}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
           windowSize={10}
-          removeClippedSubviews={Platform.OS === 'android'} 
+          removeClippedSubviews={Platform.OS === 'android'}
+          getItemLayout={getItemLayout}
         />
       )}
     </View>
