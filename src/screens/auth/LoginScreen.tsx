@@ -73,45 +73,26 @@ export default function LoginScreen() {
       );
 
       if (result.type === 'success' && result.url) {
-        // Parse token from URL
-        // Expected: scheme://auth-callback?token=...&uId=...
+        // Parse token and user info from URL
         const url = new URL(result.url);
         const token = url.searchParams.get('token');
         const uId = url.searchParams.get('uId');
         
         if (token && uId) {
-           setLoading(true);
-           try {
-             // Pass token implicitly by setting it in store or handled by API client if updated?
-             // Since we haven't updated API client yet, let's just proceed.
-             // Ideally we should update API client to use bearer token from store.
-             
-             // Temporarily assume getProfile is public or using API Key.
-             const userData: any = await CustomerService.getProfile(parseInt(uId));
-             
              const user: User = {
-                id: userData.id,
-                email: userData.email,
-                firstName: userData.first_name || userData.firstName || '',
-                lastName: userData.last_name || userData.lastName || '',
-                username: userData.username,
-                avatar: userData.avatar_url,
-                billing: userData.billing,
-                shipping: userData.shipping
+                id: parseInt(uId),
+                email: url.searchParams.get('email') || '',
+                firstName: url.searchParams.get('firstName') || '',
+                lastName: url.searchParams.get('lastName') || '',
+                username: url.searchParams.get('username') || '',
+                avatar: url.searchParams.get('avatar') || undefined,
+                billing: undefined, // Will be loaded later if needed
+                shipping: undefined 
              };
 
              setUser(user, token);
              Alert.alert('Success', `Welcome back, ${user.firstName}!`);
-             navigation.reset({
-                 index: 0,
-                 routes: [{ name: 'MainTabs' }],
-             });
-           } catch (err) {
-             console.error('Google Login Error:', err);
-             Alert.alert('Error', 'Failed to retrieve user data.');
-           } finally {
-             setLoading(false);
-           }
+             // Navigation reset is handled by the useEffect listener on isAuthenticated
         } else {
            Alert.alert('Error', 'Invalid response from Google Login.');
         }

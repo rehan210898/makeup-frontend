@@ -75,6 +75,10 @@ class ApiClient {
         return response;
       },
       (error) => {
+        if (error.response?.status === 401) {
+          console.warn('⚠️ Unauthorized - Logging out');
+          useUserStore.getState().logout();
+        }
         console.error('📥 Response Error:', error.response?.data || error.message);
         return Promise.reject(error);
       }

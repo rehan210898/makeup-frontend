@@ -108,16 +108,25 @@ export default function HomeScreen() {
 
   // Combine layout sections and popular products into a single list
   const flatListData = useMemo(() => {
-    const data: any[] = layout.map(section => ({ ...section, isSection: true }));
+    const data: any[] = layout.map((section, index) => ({ 
+      ...section, 
+      isSection: true,
+      _key: `section-${index}-${section.type}` 
+    }));
     
     if (popularProducts.length > 0) {
-      data.push({ isTitle: true, title: '🔥 Popular Products' });
+      data.push({ 
+        isTitle: true, 
+        title: '🔥 Popular Products',
+        _key: 'title-popular'
+      });
       
       // We chunk products into pairs for a 2-column grid within a single-column FlatList
       for (let i = 0; i < popularProducts.length; i += 2) {
         data.push({
           isProductRow: true,
-          products: popularProducts.slice(i, i + 2)
+          products: popularProducts.slice(i, i + 2),
+          _key: `prod-row-${i}`
         });
       }
     }
@@ -279,7 +288,7 @@ export default function HomeScreen() {
         <FlatList
           data={flatListData}
           renderItem={renderItem}
-          keyExtractor={(item, index) => index.toString()}
+          keyExtractor={(item) => item._key}
           ListFooterComponent={renderFooter}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
@@ -288,9 +297,9 @@ export default function HomeScreen() {
           }
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
-          initialNumToRender={10}
-          maxToRenderPerBatch={10}
-          windowSize={10}
+          initialNumToRender={4}
+          maxToRenderPerBatch={4}
+          windowSize={5}
           removeClippedSubviews={Platform.OS === 'android'}
           getItemLayout={getItemLayout}
         />
