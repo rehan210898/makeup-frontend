@@ -7,7 +7,7 @@ const DEV_URL = 'http://192.168.2.105:3000/api/v1';
 
 export const API_CONFIG = {
   // Force DEV_URL for now to debug
-  BASE_URL: PROD_URL, 
+  BASE_URL: DEV_URL, 
   API_KEY: '5aa92e6b5a9c561fff47ea95c872fc9b5c52652735029cb9fdf271eb9fc1e4fa',
   TIMEOUT: 30000,
 };

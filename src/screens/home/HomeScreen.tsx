@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { COLORS } from '../../constants';
 import { useCartStore } from '../../store/cartStore';
+import { useHomeStore } from '../../store/homeStore';
 import { RootStackParamList } from '../../navigation/types';
 import SearchIcon from '../../components/icons/SearchIcon';
 import layoutService from '../../services/layoutService';
@@ -24,9 +25,10 @@ import ProductCard from '../../components/products/ProductCard';
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const { width } = Dimensions.get('window');
-const COLUMN_WIDTH = (width - 50) / 2;
+// Adjusted for 2 columns: (Screen Width - Padding) / 2
+const COLUMN_WIDTH = Math.floor((width - 30) / 2); 
 
-const PRODUCT_ROW_HEIGHT = 320;
+const PRODUCT_ROW_HEIGHT = 280; // Only used for estimation if needed, but removed from render
 const SECTION_EST_HEIGHT = 400;
 const TITLE_HEIGHT = 80; // Title + margins
 
@@ -41,20 +43,36 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const { itemCount } = useCartStore();
+  const { layout: cachedLayout, popularProducts: cachedProducts, setHomeData, setPopularProducts: setCachedPopularProducts } = useHomeStore();
 
   // ... load functions ...
   const loadLayout = async () => {
     try {
       const data = await layoutService.getHomeLayout();
-      setLayout(data || []);
+      if (data) {
+        setLayout(data);
+        // We only persist if we also have popular products, or update partially?
+        // Let's update partially or wait. The store has a combined setter.
+        // We can just rely on the combined state update later or create separate setters.
+        // For now, let's keep local state in sync.
+      }
+      return data;
     } catch (error) {
       console.error('Error loading home layout:', error);
+      return null;
     }
   };
 
   const loadPopularProducts = async (pageNum: number, isRefresh: boolean = false) => {
+    // Stop if we already have 60 or more products
     if (loadingMore || (!hasMore && !isRefresh)) return;
     
+    // If we're not refreshing and already hit the limit, stop.
+    if (!isRefresh && popularProducts.length >= 60) {
+        setHasMore(false);
+        return;
+    }
+
     setLoadingMore(true);
     try {
       const response = await productService.getProducts({
@@ -71,12 +89,24 @@ export default function HomeScreen() {
       
       if (isRefresh) {
         setPopularProducts(newProducts);
+        // We persist only the first page/batch usually to keep startup fast
+        // But here we might want to persist what we have.
       } else {
-        setPopularProducts(prev => [...prev, ...newProducts]);
+        setPopularProducts(prev => {
+            const updated = [...prev, ...newProducts];
+            // Enforce hard limit of 60
+            if (updated.length >= 60) {
+                setHasMore(false);
+                return updated.slice(0, 60);
+            }
+            return updated;
+        });
       }
       setPage(pageNum + 1);
+      return newProducts;
     } catch (error) {
       console.error('Error loading popular products:', error);
+      return null;
     } finally {
       setLoadingMore(false);
       setLoading(false);
@@ -86,8 +116,29 @@ export default function HomeScreen() {
 
   useEffect(() => {
     const init = async () => {
-        await loadLayout();
-        await loadPopularProducts(1, true);
+        // 1. Load from Cache immediately
+        if (cachedLayout.length > 0) {
+            setLayout(cachedLayout);
+            setLoading(false); // Show content immediately
+        }
+        if (cachedProducts.length > 0) {
+            setPopularProducts(cachedProducts);
+        }
+
+        // 2. Fetch Fresh Data in Background
+        const layoutData = await loadLayout();
+        const productsData = await loadPopularProducts(1, true);
+
+        // 3. Update Cache if successful
+        if (layoutData && productsData) {
+            setHomeData(layoutData, productsData);
+        } else if (layoutData) {
+            // If only layout loaded (e.g. products failed), still update layout?
+            // For simplicity, we use the combined setter only when both succeed initially, 
+            // or we could add separate setters to the store.
+            // Let's assume initialized successfully.
+             setHomeData(layoutData, productsData || cachedProducts);
+        }
     };
     init();
   }, []);
@@ -108,11 +159,40 @@ export default function HomeScreen() {
 
   // Combine layout sections and popular products into a single list
   const flatListData = useMemo(() => {
-    const data: any[] = layout.map((section, index) => ({ 
-      ...section, 
-      isSection: true,
-      _key: `section-${index}-${section.type}` 
-    }));
+    const data: any[] = layout.map((section, index) => {
+      // Pre-calculate dataSource for ProductSliderSection here to ensure stability
+      let processedSection = { ...section, isSection: true, _key: `section-${index}-${section.type}` };
+      
+      if (section.type === 'product_list') {
+        const listData = section.data as any;
+        const queryType = listData.query_type;
+        const apiParams = listData.api_params || {};
+        
+        let dataSource: any = { type: 'filter', key: 'date' };
+        
+        if (queryType === 'ids') {
+          if (listData.ids) {
+            dataSource = { type: 'ids', ids: listData.ids };
+          } else if (apiParams.include) {
+            dataSource = { type: 'ids', ids: apiParams.include };
+          }
+        } else if (queryType === 'category' && apiParams.category) {
+          dataSource = { type: 'filter', key: 'category', value: apiParams.category };
+        } else if (queryType === 'best_selling') {
+          dataSource = { type: 'filter', key: 'popularity' };
+        } else if (queryType === 'on_sale') {
+          dataSource = { type: 'filter', key: 'on_sale' };
+        } else if (queryType === 'featured') {
+          dataSource = { type: 'filter', key: 'featured' };
+        } else if (queryType === 'top_rated') {
+          dataSource = { type: 'filter', key: 'rating' };
+        }
+        // Attach the calculated dataSource to the item
+        (processedSection as any).dataSource = dataSource;
+      }
+      
+      return processedSection;
+    });
     
     if (popularProducts.length > 0) {
       data.push({ 
@@ -121,7 +201,7 @@ export default function HomeScreen() {
         _key: 'title-popular'
       });
       
-      // We chunk products into pairs for a 2-column grid within a single-column FlatList
+      // We chunk products into pairs for a 2-column grid
       for (let i = 0; i < popularProducts.length; i += 2) {
         data.push({
           isProductRow: true,
@@ -138,29 +218,6 @@ export default function HomeScreen() {
     navigation.navigate('ProductDetail', { productId });
   };
   
-  const getItemLayout = useCallback((data: any, index: number) => {
-    const layoutCount = layout.length;
-    let length = 0;
-    let offset = 0;
-
-    if (index < layoutCount) {
-        // Sections (Approximate)
-        length = SECTION_EST_HEIGHT;
-        offset = index * SECTION_EST_HEIGHT;
-    } else if (index === layoutCount) {
-        // Title
-        length = TITLE_HEIGHT;
-        offset = layoutCount * SECTION_EST_HEIGHT;
-    } else {
-        // Product Rows
-        length = PRODUCT_ROW_HEIGHT;
-        // Offset = (All Sections) + Title + (Previous Rows)
-        offset = (layoutCount * SECTION_EST_HEIGHT) + TITLE_HEIGHT + ((index - (layoutCount + 1)) * PRODUCT_ROW_HEIGHT);
-    }
-    
-    return { length, offset, index };
-  }, [layout.length]);
-
   const renderItem = useCallback(({ item }: { item: any }) => {
     if (item.isTitle) {
       return (
@@ -174,7 +231,7 @@ export default function HomeScreen() {
 
     if (item.isProductRow) {
       return (
-        <View style={[styles.productRow, { height: PRODUCT_ROW_HEIGHT }]}>
+        <View style={styles.productRow}>
           {item.products.map((product: Product) => (
             <View key={product.id} style={{ width: COLUMN_WIDTH }}>
               <ProductCard 
@@ -191,14 +248,18 @@ export default function HomeScreen() {
         // ... switch case ...
         switch (item.type) {
         case 'hero_banner':
-            return <BannerSection 
-            imageUrl={(item.data as any).imageUrl || ''} 
-            action={(item.data as any).action} 
-            />;
+            return (
+              <View style={{ minHeight: 200 }}>
+                <BannerSection 
+                  imageUrl={(item.data as any).imageUrl || ''} 
+                  action={(item.data as any).action} 
+                />
+              </View>
+            );
         case 'micro_animation':
-            return <FashionMicroAnimations />;
+            return <View style={{ minHeight: 100 }}><FashionMicroAnimations /></View>;
         case 'beauty_animation':
-            return <BeautyMicroAnimations />;
+            return <View style={{ minHeight: 100 }}><BeautyMicroAnimations /></View>;
         case 'section_title':
             return (
             <GlassView style={{ marginHorizontal: 20, marginBottom: 15, marginTop: 10, padding: 10, backgroundColor: 'rgba(255,255,255,0.4)' }}>
@@ -208,37 +269,38 @@ export default function HomeScreen() {
             </GlassView>
             );
         case 'product_list':
-            const listData = item.data as any;
-            const queryType = listData.query_type;
-            const apiParams = listData.api_params || {};
-            
-            let dataSource: any = { type: 'filter', key: 'date' }; // Default to latest
-            
-            if (queryType === 'ids') {
-            if (listData.ids) {
-                dataSource = { type: 'ids', ids: listData.ids };
-            } else if (apiParams.include) {
-                dataSource = { type: 'ids', ids: apiParams.include };
-            }
-            } else if (queryType === 'category' && apiParams.category) {
-            dataSource = { type: 'filter', key: 'category', value: apiParams.category };
-            } else if (queryType === 'best_selling') {
-            dataSource = { type: 'filter', key: 'popularity' };
-            } else if (queryType === 'on_sale') {
-            dataSource = { type: 'filter', key: 'on_sale' };
-            } else if (queryType === 'featured') {
-            dataSource = { type: 'filter', key: 'featured' };
-            } else if (queryType === 'top_rated') {
-            dataSource = { type: 'filter', key: 'rating' };
-            }
-            
-            return <ProductSliderSection title={item.title || 'Products'} dataSource={dataSource} images={listData.images} />;
+            // Use the pre-calculated dataSource
+            return (
+              <View style={{ minHeight: 320 }}>
+                <ProductSliderSection 
+                  title={item.title || 'Products'} 
+                  dataSource={(item as any).dataSource} 
+                  images={(item.data as any).images} 
+                />
+              </View>
+            );
         case 'category_grid':
             const gridData = item.data as any;
-            return <CategoryGridSection title={item.title || 'Categories'} categories={gridData.ids} images={gridData.images} />;
+            return (
+              <View style={{ minHeight: 140 }}>
+                <CategoryGridSection 
+                  title={item.title || 'Categories'} 
+                  categories={gridData.ids} 
+                  images={gridData.images} 
+                />
+              </View>
+            );
         case 'brand_grid':
             const brandData = item.data as any;
-            return <BrandGridSection title={item.title || 'Top Brands'} ids={brandData.ids} images={brandData.images} />;
+            return (
+              <View style={{ minHeight: 140 }}>
+                <BrandGridSection 
+                  title={item.title || 'Top Brands'} 
+                  ids={brandData.ids} 
+                  images={brandData.images} 
+                />
+              </View>
+            );
         default:
             return null;
         }
@@ -250,7 +312,7 @@ export default function HomeScreen() {
   const renderFooter = () => {
     if (!loadingMore) return null;
     return (
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 15 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 10, marginBottom: 15 }}>
          <View style={{ width: COLUMN_WIDTH }}>
             <ProductCardSkeleton variant="home" />
          </View>
@@ -297,11 +359,10 @@ export default function HomeScreen() {
           }
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
-          initialNumToRender={4}
-          maxToRenderPerBatch={4}
-          windowSize={5}
+          initialNumToRender={6}
+          maxToRenderPerBatch={10}
+          windowSize={10} // Reduced slightly to balance memory/smoothness
           removeClippedSubviews={Platform.OS === 'android'}
-          getItemLayout={getItemLayout}
         />
       )}
     </View>
@@ -378,8 +439,9 @@ const styles = StyleSheet.create({
   },
   productRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    alignItems: 'stretch', // Stretch to equal height
+    paddingHorizontal: 10,
+    gap: 10,
     marginBottom: 15,
   },
 });

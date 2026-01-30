@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, TextInput, Animated, Platform, StatusBar, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, TextInput, Animated, Platform, StatusBar, Modal, ScrollView, Dimensions } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
@@ -24,6 +24,8 @@ const HEADER_HEIGHT = 90; // Reduced height since elements are in one row
 const FILTER_BAR_HEIGHT = 60; // Height of the filter bar
 const TOTAL_HEADER_HEIGHT = HEADER_HEIGHT + FILTER_BAR_HEIGHT;
 const PRODUCT_ITEM_HEIGHT = 320;
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = (width - 35) / 2; // (Width - 20px padding - 15px gap) / 2
 
 export default function ProductListScreen() {
   const route = useRoute<ProductListRouteProp>();
@@ -324,14 +326,16 @@ export default function ProductListScreen() {
 
   const renderItem = useCallback(({ item }: { item: Product }) => {
     return (
-      <ProductCard 
-        item={item}
-        onPress={handleProductPress}
-        onWishlistPress={toggleWishlist}
-        isWishlisted={isInWishlist(item.id)}
-      />
-        );
-      }, [isInWishlist, navigation]);
+      <View style={{ width: CARD_WIDTH }}>
+        <ProductCard 
+          item={item}
+          onPress={handleProductPress}
+          onWishlistPress={toggleWishlist}
+          isWishlisted={isInWishlist(item.id)}
+        />
+      </View>
+    );
+  }, [isInWishlist, navigation]);
     
       const getItemLayout = useCallback(
         (data: any, index: number) => ({
@@ -478,7 +482,8 @@ export default function ProductListScreen() {
           )}
           maxToRenderPerBatch={10}
           windowSize={10}
-          initialNumToRender={10}
+          initialNumToRender={6}
+          removeClippedSubviews={Platform.OS === 'android'}
           getItemLayout={getItemLayout}
           ListFooterComponent={loadingMore ? <ActivityIndicator color={COLORS.primary} /> : null}
           ListEmptyComponent={

@@ -6,17 +6,6 @@ import { Product } from '../../types';
 import HeartIcon from '../icons/HeartIcon';
 import IndianRupeeIcon from './IndianRupeeIcon';
 
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width / 2) - 20;
-
-interface ProductCardProps {
-  item: Product;
-  onPress: (id: number) => void;
-  onWishlistPress?: (product: Product) => void;
-  isWishlisted?: boolean;
-  hidePrice?: boolean;
-}
-
 const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false, hidePrice = false }: ProductCardProps) => {
   const inStock = item.inStock ?? true;
   
@@ -41,9 +30,11 @@ const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false, hid
         <Image
           source={{ uri: item.images?.[0]?.src }}
           style={styles.image}
-          contentFit="cover"
-          contentPosition="top"
+          contentFit="contain"
+          contentPosition="center"
           transition={300}
+          cachePolicy="memory-disk"
+          placeholder={{ blurhash: 'L9AB*A%LPqyuI~IpIVaK00?b~qD%' }} // Simple gray blurhash as placeholder
         />
         
         {!hidePrice && rating > 3 && (
@@ -104,10 +95,11 @@ const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false, hid
 
 const styles = StyleSheet.create({
   container: {
-    width: CARD_WIDTH,
+    flex: 1, // Ensure card takes full available height in a stretched row
+    width: '100%',
     backgroundColor: COLORS.white,
     borderRadius: 12,
-    marginBottom: 16,
+    marginBottom: 0, // Margin is handled by parent gap/padding
     borderWidth: 1,
     borderColor: 'rgba(102, 31, 29, 0.08)',
     overflow: 'hidden',
@@ -119,10 +111,13 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     width: '100%',
-    aspectRatio: 1,
-    backgroundColor: '#F5F5F5',
+    aspectRatio: 1, // Keep square
+    backgroundColor: COLORS.white,
     position: 'relative',
     overflow: 'hidden',
+    padding: 12, // Add padding to constrain the contained image size
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   image: {
     width: '100%',

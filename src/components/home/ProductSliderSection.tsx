@@ -127,7 +127,11 @@ export const ProductSliderSection: React.FC<ProductSliderSectionProps> = ({ titl
             horizontal
             data={[1, 2, 3]}
             keyExtractor={(item) => item.toString()}
-            renderItem={() => <ProductCardSkeleton />}
+            renderItem={() => (
+                <View style={{ width: CARD_WIDTH }}>
+                    <ProductCardSkeleton />
+                </View>
+            )}
             contentContainerStyle={styles.listContent}
             ItemSeparatorComponent={() => <View style={{ width: GAP }} />}
             showsHorizontalScrollIndicator={false}
@@ -150,11 +154,13 @@ export const ProductSliderSection: React.FC<ProductSliderSectionProps> = ({ titl
         data={products}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
-          <ProductCard 
-            item={item} 
-            onPress={handleProductPress}
-            hidePrice={!!images && images.length > 0}
-          />
+          <View style={{ width: CARD_WIDTH }}>
+            <ProductCard 
+                item={item} 
+                onPress={handleProductPress}
+                hidePrice={!!images && images.length > 0}
+            />
+          </View>
         )}
         contentContainerStyle={styles.listContent}
         ItemSeparatorComponent={() => <View style={{ width: GAP }} />}

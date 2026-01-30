@@ -43,22 +43,28 @@ export const HomeSkeleton = () => {
         </View>
 
         {/* Product Slider 1 */}
-        <View style={styles.section}>
+        <View style={[styles.section, { height: 320 }]}>
              <Skeleton width={180} height={20} style={{ marginBottom: 15 }} />
              <View style={styles.row}>
-                 <ProductCardSkeleton />
-                 <View style={{ width: 20 }} />
-                 <ProductCardSkeleton />
+                 <View style={{ width: (width/2)-20, marginRight: 20 }}>
+                    <ProductCardSkeleton />
+                 </View>
+                 <View style={{ width: (width/2)-20 }}>
+                    <ProductCardSkeleton />
+                 </View>
              </View>
         </View>
 
         {/* Product Slider 2 */}
-        <View style={styles.section}>
+        <View style={[styles.section, { height: 320 }]}>
              <Skeleton width={180} height={20} style={{ marginBottom: 15 }} />
              <View style={styles.row}>
-                 <ProductCardSkeleton />
-                 <View style={{ width: 20 }} />
-                 <ProductCardSkeleton />
+                 <View style={{ width: (width/2)-20, marginRight: 20 }}>
+                    <ProductCardSkeleton />
+                 </View>
+                 <View style={{ width: (width/2)-20 }}>
+                    <ProductCardSkeleton />
+                 </View>
              </View>
         </View>
     </ScrollView>
