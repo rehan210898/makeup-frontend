@@ -62,5 +62,15 @@ export const AuthService = {
   },
 
   getGoogleAuthUrl: () => `${API_CONFIG.BASE_URL}/auth/google`,
+
+  // Exchange Google access token for app session
+  googleLogin: async (accessToken: string) => {
+    try {
+      const response = await authClient.post('/google/token', { access_token: accessToken });
+      return response.data;
+    } catch (error: any) {
+      throw error.response?.data || { message: 'Google login failed' };
+    }
+  },
 };
 

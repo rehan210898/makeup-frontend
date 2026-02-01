@@ -4,9 +4,19 @@ import { Image } from 'expo-image';
 import { COLORS } from '../../constants';
 import { Product } from '../../types';
 import HeartIcon from '../icons/HeartIcon';
+import StarIcon from '../icons/StarIcon';
 import IndianRupeeIcon from './IndianRupeeIcon';
 
-const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false, hidePrice = false }: ProductCardProps) => {
+interface ProductCardProps {
+  item: Product;
+  onPress: (id: number) => void;
+  onWishlistPress?: (id: number) => void;
+  isWishlisted?: boolean;
+  hidePrice?: boolean;
+  variant?: 'default' | 'compact';
+}
+
+const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false, hidePrice = false, variant = 'default' }: ProductCardProps) => {
   const inStock = item.inStock ?? true;
   
   const regularPriceVal = item.regularPrice ? parseFloat(item.regularPrice) : 0;
@@ -19,6 +29,35 @@ const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false, hid
     : 0;
     
   const rating = item.averageRating ? parseFloat(item.averageRating) : 0;
+
+  if (variant === 'compact') {
+    return (
+      <TouchableOpacity
+        style={styles.compactContainer}
+        onPress={() => onPress(item.id)}
+        activeOpacity={0.9}
+      >
+        <View style={styles.compactImageContainer}>
+          <Image
+            source={{ uri: item.images?.[0]?.src }}
+            style={styles.image}
+            contentFit="contain"
+            transition={300}
+            placeholder={{ blurhash: 'L9AB*A%LPqyuI~IpIVaK00?b~qD%' }}
+          />
+        </View>
+        <View style={styles.compactDetails}>
+           <Text style={styles.compactName} numberOfLines={1}>{item.name}</Text>
+           <View style={styles.compactPriceRow}>
+             <Text style={styles.compactPrice}>₹{item.price}</Text>
+             {isDiscounted && (
+                <Text style={styles.compactDiscount}>{discountPercent}% off</Text>
+             )}
+           </View>
+        </View>
+      </TouchableOpacity>
+    );
+  }
 
   return (
     <TouchableOpacity
@@ -39,16 +78,19 @@ const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false, hid
         
         {!hidePrice && rating > 3 && (
             <View style={styles.ratingBadge}>
-                <Text style={styles.ratingText}>{rating.toFixed(1)} ★</Text>
+                <Text style={styles.ratingText}>{rating.toFixed(1)}</Text>
+                <View style={{ marginLeft: 2 }}>
+                  <StarIcon size={10} color="green" filled />
+                </View>
             </View>
         )}
 
         {!hidePrice && onWishlistPress && (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.wishlistBtn}
             onPress={(e) => {
               e.stopPropagation();
-              onWishlistPress(item);
+              onWishlistPress(item.id);
             }}
           >
             <HeartIcon size={16} color={isWishlisted ? COLORS.error : COLORS.primary} filled={isWishlisted} />
@@ -83,7 +125,7 @@ const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false, hid
 
           {isDiscounted && (
             <View style={styles.saleBadge}>
-              <Text style={styles.saleBadgeText}>🔥 SALE</Text>
+              <Text style={styles.saleBadgeText}>SALE</Text>
             </View>
           )}
         </View>
@@ -233,6 +275,45 @@ const styles = StyleSheet.create({
   saleBadgeText: {
     color: COLORS.error,
     fontSize: 10,
+    fontWeight: 'bold',
+  },
+  compactContainer: {
+    width: '100%',
+    backgroundColor: COLORS.white,
+    borderRadius: 8,
+    marginBottom: 0,
+    overflow: 'hidden',
+    // Minimal shadow
+  },
+  compactImageContainer: {
+    width: '100%',
+    aspectRatio: 1,
+    backgroundColor: '#f9f9f9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 5,
+  },
+  compactDetails: {
+    padding: 6,
+  },
+  compactName: {
+    fontSize: 11,
+    color: COLORS.primary,
+    marginBottom: 4,
+  },
+  compactPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  compactPrice: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+  },
+  compactDiscount: {
+    fontSize: 10,
+    color: 'green',
     fontWeight: 'bold',
   },
 });

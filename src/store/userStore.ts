@@ -7,11 +7,13 @@ interface UserState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  _hasHydrated: boolean;
   setUser: (user: User, token: string) => void;
   logout: () => void;
   updateUser: (updatedUser: Partial<User>) => void;
   addAddress: (address: SavedAddress) => void;
   removeAddress: (id: string) => void;
+  setHasHydrated: (state: boolean) => void;
 }
 
 export const useUserStore = create<UserState>()(
@@ -20,17 +22,18 @@ export const useUserStore = create<UserState>()(
       user: null,
       token: null,
       isAuthenticated: false,
+      _hasHydrated: false,
 
-      setUser: (user, token) => set((state) => ({ 
-        user: { ...user, savedAddresses: state.user?.savedAddresses || [] }, // Preserve local addresses if any, or init empty
-        token, 
-        isAuthenticated: true 
+      setUser: (user, token) => set((state) => ({
+        user: { ...user, savedAddresses: state.user?.savedAddresses || [] },
+        token,
+        isAuthenticated: true
       })),
 
-      logout: () => set({ 
-        user: null, 
-        token: null, 
-        isAuthenticated: false 
+      logout: () => set({
+        user: null,
+        token: null,
+        isAuthenticated: false
       }),
 
       updateUser: (updatedUser) => set((state) => ({
@@ -57,10 +60,15 @@ export const useUserStore = create<UserState>()(
           }
         };
       }),
+
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
     }),
     {
-      name: 'user-storage-secure', // Changed name to avoid conflicts with old AsyncStorage data
+      name: 'user-storage-secure',
       storage: createJSONStorage(() => SecureStorageAdapter),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );

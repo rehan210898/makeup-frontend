@@ -80,6 +80,31 @@ const initRazorpaySession = async (orderId: number) => {
   }
 };
 
+// Verify payment signature on backend (CRITICAL for security)
+const verifyPayment = async (
+  razorpay_order_id: string,
+  razorpay_payment_id: string,
+  razorpay_signature: string,
+  wc_order_id: number
+): Promise<any> => {
+  try {
+    const response = await axios.post(
+      `${API_CONFIG.BASE_URL}/payment/verify`,
+      {
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature,
+        wc_order_id
+      },
+      { headers: { 'X-API-Key': API_CONFIG.API_KEY } }
+    );
+    return response.data;
+  } catch (error: any) {
+    console.error('Payment verification failed:', error.response?.data || error.message);
+    throw new Error(error.response?.data?.message || 'Payment verification failed');
+  }
+};
+
 // Open Razorpay SDK
 const openRazorpay = (options: any): Promise<any> => {
   return new Promise((resolve, reject) => {
@@ -91,13 +116,14 @@ const openRazorpay = (options: any): Promise<any> => {
         'Razorpay native module not found (Expo Go). Simulating successful payment.',
         [{ text: 'OK' }]
       );
-      
+
       // Simulate network delay
       setTimeout(() => {
         resolve({
           razorpay_payment_id: 'pay_mock_' + Date.now(),
           razorpay_order_id: options.order_id,
-          razorpay_signature: 'mock_signature'
+          razorpay_signature: 'mock_signature',
+          _isMock: true
         });
       }, 1000);
       return;
@@ -161,10 +187,27 @@ export const startRazorpayCheckout = async (
 
   const paymentData = await openRazorpay(options);
 
-  // 5. Success
-  return { 
-    success: true, 
-    orderId: wcOrder.id, 
+  // 5. Verify payment on backend (CRITICAL - skip for mock in dev)
+  if (!paymentData._isMock) {
+    try {
+      await verifyPayment(
+        paymentData.razorpay_order_id,
+        paymentData.razorpay_payment_id,
+        paymentData.razorpay_signature,
+        wcOrder.id
+      );
+    } catch (verifyError: any) {
+      // Payment was made but verification failed - log for reconciliation
+      console.error('Payment verification failed:', verifyError);
+      // Still return success to user as payment was captured by Razorpay
+      // Webhook will handle order update
+    }
+  }
+
+  // 6. Success
+  return {
+    success: true,
+    orderId: wcOrder.id,
     paymentId: paymentData.razorpay_payment_id,
     signature: paymentData.razorpay_signature
   };

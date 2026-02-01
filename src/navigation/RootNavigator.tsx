@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as Linking from 'expo-linking';
 import { RootStackParamList } from './types';
 import BottomTabNavigator from './BottomTabNavigator';
+import SplashScreen from '../screens/SplashScreen';
 import ProductDetailScreen from '../screens/products/ProductDetailScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
@@ -46,12 +47,17 @@ export default function RootNavigator() {
   return (
     <NavigationContainer linking={linking}>
       <Stack.Navigator
-        initialRouteName="Login"
+        initialRouteName="Splash"
         screenOptions={{
           headerShown: false,
           animation: 'slide_from_right',
         }}
       >
+        <Stack.Screen
+          name="Splash"
+          component={SplashScreen}
+          options={{ animation: 'fade' }}
+        />
         <Stack.Screen name="MainTabs" component={BottomTabNavigator} />
         <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
         <Stack.Screen name="ProductList" component={ProductListScreen} />
@@ -64,15 +70,15 @@ export default function RootNavigator() {
         <Stack.Screen name="Refund" component={RefundScreen} />
         <Stack.Screen name="Wishlist" component={WishlistScreen} />
         <Stack.Screen name="Address" component={AddressScreen} />
-        <Stack.Screen 
-          name="EditProfile" 
-          component={EditProfileScreen} 
-          options={{ headerShown: true, title: 'Personal Details' }} 
+        <Stack.Screen
+          name="EditProfile"
+          component={EditProfileScreen}
+          options={{ headerShown: true, title: 'Personal Details' }}
         />
-        <Stack.Screen 
-          name="ChangePassword" 
-          component={ChangePasswordScreen} 
-          options={{ headerShown: true, title: 'Change Password' }} 
+        <Stack.Screen
+          name="ChangePassword"
+          component={ChangePasswordScreen}
+          options={{ headerShown: true, title: 'Change Password' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

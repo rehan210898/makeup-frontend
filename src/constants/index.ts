@@ -1,9 +1,10 @@
+// Force Cache Refresh
 // API Configuration
 // NOTE: Replace 'https://your-backend-app.onrender.com' with your actual deployed URL after Step 1.
 const PROD_URL = 'https://woocommerce-bff-muo.onrender.com/api/v1'; 
 // Ensure this IP matches your computer's IP address (ipconfig/ifconfig)
 // const DEV_URL = 'http://192.168.2.105:3000/api/v1'; 
-const DEV_URL = 'http://192.168.2.105:3000/api/v1'; 
+const DEV_URL = 'http://192.168.1.224:3000/api/v1'; 
 
 export const API_CONFIG = {
   // Force DEV_URL for now to debug
@@ -24,6 +25,7 @@ export const COLORS = {
   accentLight: '#f9eceb',
   white: '#FFFFFF',
   black: '#000000',
+  background: '#f9eceb',
   gray: {
     100: '#F7F7F7',
     200: '#E5E5E5',
@@ -34,6 +36,11 @@ export const COLORS = {
     700: '#404040',
     800: '#262626',
     900: '#171717',
+  },
+  text: {
+    primary: '#171717',
+    secondary: '#525252',
+    muted: '#737373',
   },
   success: '#10B981',
   error: '#EF4444',

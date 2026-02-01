@@ -93,28 +93,28 @@ export const BeautyMicroAnimations = () => {
         <View style={styles.iconsContainer}>
             {/* Animated Perfume */}
             <AnimatedView style={[styles.iconWrapper, perfumeStyle]}>
-              <Svg width="36" height="36" viewBox="0 0 24 24" fill={COLORS.primary} opacity={0.8}>
+              <Svg width="36" height="36" viewBox="0 0 24 24" stroke={COLORS.primary} strokeWidth="1.5" fill="none">
                 <Path d={PERFUME_PATH} />
               </Svg>
             </AnimatedView>
 
             {/* Animated Brush */}
             <AnimatedView style={[styles.iconWrapper, brushStyle]}>
-               <Svg width="36" height="36" viewBox="0 0 24 24" fill={COLORS.accent}>
+               <Svg width="36" height="36" viewBox="0 0 24 24" stroke={COLORS.accent} strokeWidth="1.5" fill="none">
                   <Path d={BRUSH_PATH} />
                </Svg>
             </AnimatedView>
 
             {/* Animated Compact */}
             <AnimatedView style={[styles.iconWrapper, compactStyle]}>
-               <Svg width="36" height="36" viewBox="0 0 24 24" fill={COLORS.primary} opacity={0.6}>
+               <Svg width="36" height="36" viewBox="0 0 24 24" stroke={COLORS.primary} strokeWidth="1.5" fill="none">
                   <Path d={COMPACT_PATH} />
                </Svg>
             </AnimatedView>
 
              {/* Animated Sparkle */}
              <AnimatedView style={[styles.iconWrapper, sparkleStyle]}>
-               <Svg width="32" height="32" viewBox="0 0 24 24" fill="#FFD700">
+               <Svg width="32" height="32" viewBox="0 0 24 24" stroke="#FFD700" strokeWidth="1.5" fill="none">
                   <Path d={SPARKLE_PATH} />
                </Svg>
             </AnimatedView>

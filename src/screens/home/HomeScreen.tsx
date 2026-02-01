@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Platform, RefreshControl, ActivityIndicator, Dimensions } from 'react-native';
+import React, { useEffect, useState, useCallback, useMemo, memo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, RefreshControl, Dimensions, InteractionManager } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { COLORS } from '../../constants';
@@ -7,20 +8,20 @@ import { useCartStore } from '../../store/cartStore';
 import { useHomeStore } from '../../store/homeStore';
 import { RootStackParamList } from '../../navigation/types';
 import SearchIcon from '../../components/icons/SearchIcon';
+import HomeIcon from '../../components/icons/HomeIcon';
+import CartIcon from '../../components/icons/CartIcon';
 import layoutService from '../../services/layoutService';
-import productService from '../../services/productService';
-import { HomeLayoutSection, Product } from '../../types';
+import { HomeLayoutSection } from '../../types';
 import { BannerSection } from '../../components/home/BannerSection';
 import { ProductSliderSection } from '../../components/home/ProductSliderSection';
+import { ProductGridSection } from '../../components/home/ProductGridSection';
 import { CategoryGridSection } from '../../components/home/CategoryGridSection';
 import { FashionMicroAnimations } from '../../components/home/FashionMicroAnimations';
 import { BeautyMicroAnimations } from '../../components/home/BeautyMicroAnimations';
 import { BrandGridSection } from '../../components/home/BrandGridSection';
 import { FloatingIconsBackground } from '../../components/home/FloatingIconsBackground';
 import { HomeSkeleton } from '../../components/skeletons/HomeSkeleton';
-import { ProductCardSkeleton } from '../../components/skeletons/ProductCardSkeleton';
 import { GlassView } from '../../components/common/GlassView';
-import ProductCard from '../../components/products/ProductCard';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -36,14 +37,10 @@ export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   // ... state ...
   const [layout, setLayout] = useState<HomeLayoutSection[]>([]);
-  const [popularProducts, setPopularProducts] = useState<Product[]>([]);
-  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
   const { itemCount } = useCartStore();
-  const { layout: cachedLayout, popularProducts: cachedProducts, setHomeData, setPopularProducts: setCachedPopularProducts } = useHomeStore();
+  const { layout: cachedLayout, popularProducts: cachedProducts, setHomeData } = useHomeStore();
 
   // ... load functions ...
   const loadLayout = async () => {
@@ -51,66 +48,11 @@ export default function HomeScreen() {
       const data = await layoutService.getHomeLayout();
       if (data) {
         setLayout(data);
-        // We only persist if we also have popular products, or update partially?
-        // Let's update partially or wait. The store has a combined setter.
-        // We can just rely on the combined state update later or create separate setters.
-        // For now, let's keep local state in sync.
       }
       return data;
     } catch (error) {
       console.error('Error loading home layout:', error);
       return null;
-    }
-  };
-
-  const loadPopularProducts = async (pageNum: number, isRefresh: boolean = false) => {
-    // Stop if we already have 60 or more products
-    if (loadingMore || (!hasMore && !isRefresh)) return;
-    
-    // If we're not refreshing and already hit the limit, stop.
-    if (!isRefresh && popularProducts.length >= 60) {
-        setHasMore(false);
-        return;
-    }
-
-    setLoadingMore(true);
-    try {
-      const response = await productService.getProducts({
-        orderby: 'popularity',
-        order: 'desc',
-        page: pageNum,
-        per_page: 10
-      });
-      
-      const newProducts = response.data || [];
-      if (newProducts.length < 10) {
-          setHasMore(false);
-      }
-      
-      if (isRefresh) {
-        setPopularProducts(newProducts);
-        // We persist only the first page/batch usually to keep startup fast
-        // But here we might want to persist what we have.
-      } else {
-        setPopularProducts(prev => {
-            const updated = [...prev, ...newProducts];
-            // Enforce hard limit of 60
-            if (updated.length >= 60) {
-                setHasMore(false);
-                return updated.slice(0, 60);
-            }
-            return updated;
-        });
-      }
-      setPage(pageNum + 1);
-      return newProducts;
-    } catch (error) {
-      console.error('Error loading popular products:', error);
-      return null;
-    } finally {
-      setLoadingMore(false);
-      setLoading(false);
-      setRefreshing(false);
     }
   };
 
@@ -121,23 +63,13 @@ export default function HomeScreen() {
             setLayout(cachedLayout);
             setLoading(false); // Show content immediately
         }
-        if (cachedProducts.length > 0) {
-            setPopularProducts(cachedProducts);
-        }
 
         // 2. Fetch Fresh Data in Background
         const layoutData = await loadLayout();
-        const productsData = await loadPopularProducts(1, true);
 
         // 3. Update Cache if successful
-        if (layoutData && productsData) {
-            setHomeData(layoutData, productsData);
-        } else if (layoutData) {
-            // If only layout loaded (e.g. products failed), still update layout?
-            // For simplicity, we use the combined setter only when both succeed initially, 
-            // or we could add separate setters to the store.
-            // Let's assume initialized successfully.
-             setHomeData(layoutData, productsData || cachedProducts);
+        if (layoutData) {
+            setHomeData(layoutData, cachedProducts);
         }
     };
     init();
@@ -145,17 +77,8 @@ export default function HomeScreen() {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    setPage(1);
-    setHasMore(true);
-    loadLayout();
-    loadPopularProducts(1, true);
+    loadLayout().then(() => setRefreshing(false));
   }, []);
-
-  const handleLoadMore = () => {
-    if (!loadingMore && hasMore && !loading) {
-      loadPopularProducts(page);
-    }
-  };
 
   // Combine layout sections and popular products into a single list
   const flatListData = useMemo(() => {
@@ -194,56 +117,14 @@ export default function HomeScreen() {
       return processedSection;
     });
     
-    if (popularProducts.length > 0) {
-      data.push({ 
-        isTitle: true, 
-        title: '🔥 Popular Products',
-        _key: 'title-popular'
-      });
-      
-      // We chunk products into pairs for a 2-column grid
-      for (let i = 0; i < popularProducts.length; i += 2) {
-        data.push({
-          isProductRow: true,
-          products: popularProducts.slice(i, i + 2),
-          _key: `prod-row-${i}`
-        });
-      }
-    }
-    
     return data;
-  }, [layout, popularProducts]);
+  }, [layout]);
 
   const handleProductPress = (productId: number) => {
     navigation.navigate('ProductDetail', { productId });
   };
   
   const renderItem = useCallback(({ item }: { item: any }) => {
-    if (item.isTitle) {
-      return (
-        <View style={{ paddingHorizontal: 20, marginBottom: 15, marginTop: 25, height: TITLE_HEIGHT - 40 }}>
-          <Text style={{ fontSize: 22, fontWeight: 'bold', color: COLORS.primary }}>
-            {item.title}
-          </Text>
-        </View>
-      );
-    }
-
-    if (item.isProductRow) {
-      return (
-        <View style={styles.productRow}>
-          {item.products.map((product: Product) => (
-            <View key={product.id} style={{ width: COLUMN_WIDTH }}>
-              <ProductCard 
-                item={product} 
-                onPress={handleProductPress}
-              />
-            </View>
-          ))}
-        </View>
-      );
-    }
-
     if (item.isSection) {
         // ... switch case ...
         switch (item.type) {
@@ -269,6 +150,18 @@ export default function HomeScreen() {
             </GlassView>
             );
         case 'product_list':
+            const layoutType = (item.data as any).layout;
+            
+            if (layoutType && layoutType.startsWith('grid_3_col')) {
+               return (
+                  <ProductGridSection 
+                     title={item.title} 
+                     dataSource={(item as any).dataSource}
+                     withContainer={layoutType.includes('container')}
+                  />
+               );
+            }
+
             // Use the pre-calculated dataSource
             return (
               <View style={{ minHeight: 320 }}>
@@ -276,6 +169,7 @@ export default function HomeScreen() {
                   title={item.title || 'Products'} 
                   dataSource={(item as any).dataSource} 
                   images={(item.data as any).images} 
+                  layout={layoutType}
                 />
               </View>
             );
@@ -309,28 +203,18 @@ export default function HomeScreen() {
     return null;
   }, [handleProductPress]);
 
-  const renderFooter = () => {
-    if (!loadingMore) return null;
-    return (
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 10, marginBottom: 15 }}>
-         <View style={{ width: COLUMN_WIDTH }}>
-            <ProductCardSkeleton variant="home" />
-         </View>
-         <View style={{ width: COLUMN_WIDTH }}>
-            <ProductCardSkeleton variant="home" />
-         </View>
-      </View>
-    );
-  };
-
   return (
     <View style={styles.container}>
       <FloatingIconsBackground />
       <GlassView style={styles.header}>
         <View style={styles.headerTopRow}>
-          <Text style={styles.headerTitle}>🏠 Home</Text>
-          <View style={[styles.cartBadge, { backgroundColor: 'rgba(0,0,0,0.1)' }]}>
-            <Text style={[styles.cartBadgeText, { color: COLORS.primary }]}>🛒 {itemCount}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+             <HomeIcon size={24} color={COLORS.primary} />
+             <Text style={styles.headerTitle}>Home</Text>
+          </View>
+          <View style={[styles.cartBadge, { backgroundColor: 'rgba(0,0,0,0.1)', flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+            <CartIcon size={18} color={COLORS.primary} />
+            <Text style={[styles.cartBadgeText, { color: COLORS.primary }]}>{itemCount}</Text>
           </View>
         </View>
         
@@ -344,25 +228,19 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </GlassView>
 
-      {loading && page === 1 ? (
+      {loading ? (
         <HomeSkeleton />
       ) : (
-        <FlatList
+        <FlashList
           data={flatListData}
           renderItem={renderItem}
           keyExtractor={(item) => item._key}
-          ListFooterComponent={renderFooter}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
           }
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.5}
-          initialNumToRender={6}
-          maxToRenderPerBatch={10}
-          windowSize={10} // Reduced slightly to balance memory/smoothness
-          removeClippedSubviews={Platform.OS === 'android'}
+          drawDistance={500}
         />
       )}
     </View>

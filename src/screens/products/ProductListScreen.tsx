@@ -319,9 +319,13 @@ export default function ProductListScreen() {
     navigation.navigate('ProductDetail', { productId });
   };
 
-  const toggleWishlist = (item: Product) => {
-    if (isInWishlist(item.id)) removeFromWishlist(item.id);
-    else addToWishlist(item);
+  const toggleWishlist = (id: number) => {
+    if (isInWishlist(id)) {
+      removeFromWishlist(id);
+    } else {
+      const item = products.find(p => p.id === id);
+      if (item) addToWishlist(item);
+    }
   };
 
   const renderItem = useCallback(({ item }: { item: Product }) => {

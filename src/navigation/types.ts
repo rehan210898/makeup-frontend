@@ -10,6 +10,7 @@ export type BottomTabParamList = {
 
 // Root Stack Navigator
 export type RootStackParamList = {
+  Splash: undefined;
   MainTabs: NavigatorScreenParams<BottomTabParamList>;
   ProductDetail: { productId: number };
   ProductList: { categoryId?: number; categoryName?: string; search?: string; attribute?: string; termId?: number; title?: string };

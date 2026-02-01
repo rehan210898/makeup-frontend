@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Dimensions, FlatList } from 'react-native';
+import React, { useEffect, useState, useCallback, memo } from 'react';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from '@react-navigation/native';
 import { COLORS } from '../../constants';
 import productService from '../../services/productService';
@@ -17,16 +18,20 @@ interface ProductSliderSectionProps {
     value?: string | number;
   };
   images?: string[];
+  layout?: string;
 }
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width / 2) - 20;
 const GAP = 20;
 
-export const ProductSliderSection: React.FC<ProductSliderSectionProps> = ({ title, dataSource, images }) => {
+const ProductSliderSectionComponent: React.FC<ProductSliderSectionProps> = ({ title, dataSource, images, layout }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation<any>();
+
+  const isCompactSlider = layout === 'slider_2_5';
+  const CARD_WIDTH = isCompactSlider ? (width / 2.5) : (width / 2) - 20;
+
 
   useEffect(() => {
     loadProducts();
@@ -111,31 +116,44 @@ export const ProductSliderSection: React.FC<ProductSliderSectionProps> = ({ titl
     }
   };
 
-  const handleProductPress = (id: number) => {
+  const handleProductPress = useCallback((id: number) => {
     navigation.navigate('ProductDetail', { productId: id });
-  };
+  }, [navigation]);
+
+  const renderSkeletonItem = useCallback(() => (
+    <View style={{ width: CARD_WIDTH, marginRight: GAP }}>
+      <ProductCardSkeleton />
+    </View>
+  ), [CARD_WIDTH]);
+
+  const renderProductItem = useCallback(({ item }: { item: Product }) => (
+    <View style={{ width: CARD_WIDTH, marginRight: GAP }}>
+      <ProductCard
+        item={item}
+        onPress={handleProductPress}
+        hidePrice={!!images && images.length > 0}
+      />
+    </View>
+  ), [CARD_WIDTH, handleProductPress, images]);
 
   if (loading) {
     return (
       <View style={styles.container}>
         {title ? (
-            <View style={styles.header}>
-                <Text style={styles.title}>{title}</Text>
-            </View>
+          <View style={styles.header}>
+            <Text style={styles.title}>{title}</Text>
+          </View>
         ) : null}
-        <FlatList
+        <View style={{ height: 280 }}>
+          <FlashList
             horizontal
             data={[1, 2, 3]}
             keyExtractor={(item) => item.toString()}
-            renderItem={() => (
-                <View style={{ width: CARD_WIDTH }}>
-                    <ProductCardSkeleton />
-                </View>
-            )}
+            renderItem={renderSkeletonItem}
             contentContainerStyle={styles.listContent}
-            ItemSeparatorComponent={() => <View style={{ width: GAP }} />}
             showsHorizontalScrollIndicator={false}
-        />
+          />
+        </View>
       </View>
     );
   }
@@ -149,29 +167,32 @@ export const ProductSliderSection: React.FC<ProductSliderSectionProps> = ({ titl
           <Text style={styles.title}>{title}</Text>
         </View>
       ) : null}
-      <FlatList
-        horizontal
-        data={products}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <View style={{ width: CARD_WIDTH }}>
-            <ProductCard 
-                item={item} 
-                onPress={handleProductPress}
-                hidePrice={!!images && images.length > 0}
-            />
-          </View>
-        )}
-        contentContainerStyle={styles.listContent}
-        ItemSeparatorComponent={() => <View style={{ width: GAP }} />}
-        showsHorizontalScrollIndicator={false}
-        snapToInterval={CARD_WIDTH + GAP}
-        decelerationRate="fast"
-        snapToAlignment="start"
-      />
+      <View style={{ height: 280 }}>
+        <FlashList
+          horizontal
+          data={products}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={renderProductItem}
+          contentContainerStyle={styles.listContent}
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={CARD_WIDTH + GAP}
+          decelerationRate="fast"
+          snapToAlignment="start"
+        />
+      </View>
     </View>
   );
 };
+
+// Memoize to prevent unnecessary re-renders when parent updates
+export const ProductSliderSection = memo(ProductSliderSectionComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.title === nextProps.title &&
+    prevProps.layout === nextProps.layout &&
+    JSON.stringify(prevProps.dataSource) === JSON.stringify(nextProps.dataSource) &&
+    JSON.stringify(prevProps.images) === JSON.stringify(nextProps.images)
+  );
+});
 
 const styles = StyleSheet.create({
   container: {

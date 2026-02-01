@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { 
-  View, 
-  FlatList, 
-  ActivityIndicator, 
-  StyleSheet, 
-  Text, 
-  TouchableOpacity, 
-  SafeAreaView, 
-  StatusBar 
+import {
+  View,
+  FlatList,
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  SafeAreaView,
+  StatusBar,
+  Dimensions,
 } from 'react-native';
 import { DemoProduct, fetchProducts } from './api';
 import { ProductCard, CARD_HEIGHT, SPACING } from './ProductCard';
