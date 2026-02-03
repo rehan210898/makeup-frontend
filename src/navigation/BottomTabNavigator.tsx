@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
 import Animated, {
@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { BottomTabParamList } from './types';
 import { COLORS } from '../constants';
+import { FONTS } from '../constants/fonts';
 import { useCartStore } from '../store/cartStore';
 import { haptic } from '../utils/haptics';
 
@@ -99,9 +100,9 @@ const AnimatedCartBadge: React.FC<AnimatedCartBadgeProps> = ({ count }) => {
 
   return (
     <Animated.View style={[styles.badge, animatedStyle]}>
-      <Animated.Text style={styles.badgeText}>
+      <Text style={styles.badgeText}>
         {count > 99 ? '99+' : count}
-      </Animated.Text>
+      </Text>
     </Animated.View>
   );
 };
@@ -123,19 +124,22 @@ export default function BottomTabNavigator() {
           paddingBottom: Platform.OS === 'ios' ? 25 : 10,
           paddingTop: 10,
           elevation: 0,
-          shadowOpacity: 0,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 10,
         },
         tabBarBackground: () =>
           Platform.OS === 'ios' ? (
             <BlurView
-              intensity={80}
+              intensity={90}
               tint="light"
               style={StyleSheet.absoluteFill}
             />
           ) : null,
         tabBarLabelStyle: {
+          fontFamily: FONTS.display.medium,
           fontSize: 11,
-          fontWeight: '600',
           marginTop: 2,
         },
       }}
@@ -162,7 +166,7 @@ export default function BottomTabNavigator() {
         name="CategoriesTab"
         component={CategoriesScreen}
         options={{
-          tabBarLabel: 'Categories',
+          tabBarLabel: 'Shop',
           tabBarIcon: ({ color, size, focused }) => (
             <AnimatedTabIcon
               IconComponent={GridIcon}
@@ -180,7 +184,7 @@ export default function BottomTabNavigator() {
         name="CartTab"
         component={CartScreen}
         options={{
-          tabBarLabel: 'Cart',
+          tabBarLabel: 'Bag',
           tabBarIcon: ({ color, size, focused }) => (
             <View>
               <AnimatedTabIcon
@@ -224,7 +228,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -6,
     right: -10,
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.primary,
     borderRadius: 10,
     minWidth: 18,
     height: 18,
@@ -235,8 +239,8 @@ const styles = StyleSheet.create({
     borderColor: COLORS.white,
   },
   badgeText: {
-    color: COLORS.primary,
+    color: COLORS.white,
     fontSize: 10,
-    fontWeight: 'bold',
+    fontFamily: FONTS.display.bold,
   },
 });

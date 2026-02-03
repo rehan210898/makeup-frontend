@@ -1,17 +1,18 @@
-import React, { useEffect, useState, useCallback, useMemo, memo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, RefreshControl, Dimensions, InteractionManager } from 'react-native';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, RefreshControl, Dimensions } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { COLORS } from '../../constants';
+import { FONTS } from '../../constants/fonts';
 import { useCartStore } from '../../store/cartStore';
 import { useHomeStore } from '../../store/homeStore';
+import { useUserStore } from '../../store/userStore';
 import { RootStackParamList } from '../../navigation/types';
-import SearchIcon from '../../components/icons/SearchIcon';
-import HomeIcon from '../../components/icons/HomeIcon';
-import CartIcon from '../../components/icons/CartIcon';
 import layoutService from '../../services/layoutService';
 import { HomeLayoutSection } from '../../types';
+
+// Existing Components
 import { BannerSection } from '../../components/home/BannerSection';
 import { ProductSliderSection } from '../../components/home/ProductSliderSection';
 import { ProductGridSection } from '../../components/home/ProductGridSection';
@@ -23,54 +24,60 @@ import { FloatingIconsBackground } from '../../components/home/FloatingIconsBack
 import { HomeSkeleton } from '../../components/skeletons/HomeSkeleton';
 import { GlassView } from '../../components/common/GlassView';
 
+// New Stitch UI Components
+import { HomeHeader } from '../../components/home/HomeHeader';
+import { HeroCarousel } from '../../components/home/HeroCarousel';
+import { CategoryCircleSection } from '../../components/home/CategoryCircleSection';
+import { PromoBanner } from '../../components/home/PromoBanner';
+import { FlashSaleSection } from '../../components/home/FlashSaleSection';
+import { TrendingVideosSection } from '../../components/home/TrendingVideosSection';
+import { TopRatedSection } from '../../components/home/TopRatedSection';
+import { EditorsChoiceSection } from '../../components/home/EditorsChoiceSection';
+import { RewardProgramCard } from '../../components/home/RewardProgramCard';
+
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const { width } = Dimensions.get('window');
-// Adjusted for 2 columns: (Screen Width - Padding) / 2
-const COLUMN_WIDTH = Math.floor((width - 30) / 2); 
-
-const PRODUCT_ROW_HEIGHT = 280; // Only used for estimation if needed, but removed from render
-const SECTION_EST_HEIGHT = 400;
-const TITLE_HEIGHT = 80; // Title + margins
 
 export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
-  // ... state ...
   const [layout, setLayout] = useState<HomeLayoutSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { itemCount } = useCartStore();
   const { layout: cachedLayout, popularProducts: cachedProducts, setHomeData } = useHomeStore();
+  const { user } = useUserStore();
 
-  // ... load functions ...
   const loadLayout = async () => {
     try {
       const data = await layoutService.getHomeLayout();
       if (data) {
         setLayout(data);
+        setLoading(false);
       }
       return data;
     } catch (error) {
       console.error('Error loading home layout:', error);
+      setLoading(false);
       return null;
     }
   };
 
   useEffect(() => {
     const init = async () => {
-        // 1. Load from Cache immediately
-        if (cachedLayout.length > 0) {
-            setLayout(cachedLayout);
-            setLoading(false); // Show content immediately
-        }
+      // Load from cache immediately
+      if (cachedLayout.length > 0) {
+        setLayout(cachedLayout);
+        setLoading(false);
+      }
 
-        // 2. Fetch Fresh Data in Background
-        const layoutData = await loadLayout();
+      // Fetch fresh data in background
+      const layoutData = await loadLayout();
 
-        // 3. Update Cache if successful
-        if (layoutData) {
-            setHomeData(layoutData, cachedProducts);
-        }
+      // Update cache if successful
+      if (layoutData) {
+        setHomeData(layoutData, cachedProducts);
+      }
     };
     init();
   }, []);
@@ -80,19 +87,17 @@ export default function HomeScreen() {
     loadLayout().then(() => setRefreshing(false));
   }, []);
 
-  // Combine layout sections and popular products into a single list
   const flatListData = useMemo(() => {
     const data: any[] = layout.map((section, index) => {
-      // Pre-calculate dataSource for ProductSliderSection here to ensure stability
       let processedSection = { ...section, isSection: true, _key: `section-${index}-${section.type}` };
-      
+
       if (section.type === 'product_list') {
         const listData = section.data as any;
         const queryType = listData.query_type;
         const apiParams = listData.api_params || {};
-        
+
         let dataSource: any = { type: 'filter', key: 'date' };
-        
+
         if (queryType === 'ids') {
           if (listData.ids) {
             dataSource = { type: 'ids', ids: listData.ids };
@@ -110,94 +115,177 @@ export default function HomeScreen() {
         } else if (queryType === 'top_rated') {
           dataSource = { type: 'filter', key: 'rating' };
         }
-        // Attach the calculated dataSource to the item
         (processedSection as any).dataSource = dataSource;
       }
-      
+
       return processedSection;
     });
-    
+
     return data;
   }, [layout]);
 
   const handleProductPress = (productId: number) => {
     navigation.navigate('ProductDetail', { productId });
   };
-  
+
+  const handleSearchPress = () => {
+    navigation.navigate('ProductList', {});
+  };
+
   const renderItem = useCallback(({ item }: { item: any }) => {
     if (item.isSection) {
-        // ... switch case ...
-        switch (item.type) {
-        case 'hero_banner':
-            return (
-              <View style={{ minHeight: 200 }}>
-                <BannerSection 
-                  imageUrl={(item.data as any).imageUrl || ''} 
-                  action={(item.data as any).action} 
-                />
-              </View>
-            );
-        case 'micro_animation':
-            return <View style={{ minHeight: 100 }}><FashionMicroAnimations /></View>;
-        case 'beauty_animation':
-            return <View style={{ minHeight: 100 }}><BeautyMicroAnimations /></View>;
-        case 'section_title':
-            return (
-            <GlassView style={{ marginHorizontal: 20, marginBottom: 15, marginTop: 10, padding: 10, backgroundColor: 'rgba(255,255,255,0.4)' }}>
-                <Text style={{ fontSize: 20, fontWeight: 'bold', color: COLORS.primary }}>
-                {(item.data as any).text}
-                </Text>
-            </GlassView>
-            );
-        case 'product_list':
-            const layoutType = (item.data as any).layout;
-            
-            if (layoutType && layoutType.startsWith('grid_3_col')) {
-               return (
-                  <ProductGridSection 
-                     title={item.title} 
-                     dataSource={(item as any).dataSource}
-                     withContainer={layoutType.includes('container')}
-                  />
-               );
-            }
+      switch (item.type) {
+        // New Stitch UI Components
+        case 'hero_carousel':
+          return (
+            <View style={{ minHeight: 420 }}>
+              <HeroCarousel
+                slides={(item.data as any).slides || []}
+                autoPlayInterval={(item.data as any).autoPlayInterval}
+              />
+            </View>
+          );
 
-            // Use the pre-calculated dataSource
+        case 'category_circles':
+          return (
+            <CategoryCircleSection
+              title={item.title || 'Categories'}
+              categories={(item.data as any).ids}
+              images={(item.data as any).images}
+            />
+          );
+
+        case 'promo_banner':
+          return (
+            <PromoBanner
+              imageUrl={(item.data as any).imageUrl}
+              title={(item.data as any).title}
+              titleAccent={(item.data as any).titleAccent}
+              description={(item.data as any).description}
+              ctaText={(item.data as any).ctaText}
+              action={(item.data as any).action}
+            />
+          );
+
+        case 'flash_sale':
+          return (
+            <FlashSaleSection
+              title={item.title}
+              endTime={(item.data as any).endTime}
+              productIds={(item.data as any).products?.ids}
+            />
+          );
+
+        case 'trending_videos':
+          return (
+            <TrendingVideosSection
+              title={item.title || 'Trending Now'}
+              videos={(item.data as any).videos || []}
+            />
+          );
+
+        case 'top_rated':
+          return (
+            <TopRatedSection
+              title={item.title || 'Top Rated Favorites'}
+              productIds={(item.data as any).ids}
+            />
+          );
+
+        case 'editors_choice':
+          return (
+            <EditorsChoiceSection
+              title={item.title || "Editor's Choice"}
+              productIds={(item.data as any).ids}
+            />
+          );
+
+        case 'reward_card':
+          return (
+            <RewardProgramCard
+              title={(item.data as any).title}
+              description={(item.data as any).description}
+              ctaText={(item.data as any).ctaText}
+            />
+          );
+
+        // Existing Components
+        case 'hero_banner':
+          return (
+            <View style={{ minHeight: 200 }}>
+              <BannerSection
+                imageUrl={(item.data as any).imageUrl || ''}
+                action={(item.data as any).action}
+              />
+            </View>
+          );
+
+        case 'micro_animation':
+          return <View style={{ minHeight: 100 }}><FashionMicroAnimations /></View>;
+
+        case 'beauty_animation':
+          return <View style={{ minHeight: 100 }}><BeautyMicroAnimations /></View>;
+
+        case 'section_title':
+          return (
+            <GlassView style={styles.sectionTitleContainer}>
+              <Text style={styles.sectionTitleText}>
+                {(item.data as any).text}
+              </Text>
+            </GlassView>
+          );
+
+        case 'product_list':
+          const layoutType = (item.data as any).layout;
+
+          if (layoutType && layoutType.startsWith('grid_3_col')) {
             return (
-              <View style={{ minHeight: 320 }}>
-                <ProductSliderSection 
-                  title={item.title || 'Products'} 
-                  dataSource={(item as any).dataSource} 
-                  images={(item.data as any).images} 
-                  layout={layoutType}
-                />
-              </View>
+              <ProductGridSection
+                title={item.title}
+                dataSource={(item as any).dataSource}
+                withContainer={layoutType.includes('container')}
+              />
             );
+          }
+
+          return (
+            <View style={{ minHeight: 320 }}>
+              <ProductSliderSection
+                title={item.title || 'Products'}
+                dataSource={(item as any).dataSource}
+                images={(item.data as any).images}
+                layout={layoutType}
+              />
+            </View>
+          );
+
         case 'category_grid':
-            const gridData = item.data as any;
-            return (
-              <View style={{ minHeight: 140 }}>
-                <CategoryGridSection 
-                  title={item.title || 'Categories'} 
-                  categories={gridData.ids} 
-                  images={gridData.images} 
-                />
-              </View>
-            );
+          const gridData = item.data as any;
+          return (
+            <View style={{ minHeight: 140 }}>
+              <CategoryGridSection
+                title={item.title || 'Categories'}
+                categories={gridData.ids}
+                images={gridData.images}
+              />
+            </View>
+          );
+
         case 'brand_grid':
-            const brandData = item.data as any;
-            return (
-              <View style={{ minHeight: 140 }}>
-                <BrandGridSection 
-                  title={item.title || 'Top Brands'} 
-                  ids={brandData.ids} 
-                  images={brandData.images} 
-                />
-              </View>
-            );
+          const brandData = item.data as any;
+          return (
+            <View style={{ minHeight: 140 }}>
+              <BrandGridSection
+                title={item.title || 'Top Brands'}
+                ids={brandData.ids}
+                images={brandData.images}
+              />
+            </View>
+          );
+
         default:
-            return null;
-        }
+          return null;
+      }
     }
 
     return null;
@@ -205,28 +293,12 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <FloatingIconsBackground />
-      <GlassView style={styles.header}>
-        <View style={styles.headerTopRow}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-             <HomeIcon size={24} color={COLORS.primary} />
-             <Text style={styles.headerTitle}>Home</Text>
-          </View>
-          <View style={[styles.cartBadge, { backgroundColor: 'rgba(0,0,0,0.1)', flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
-            <CartIcon size={18} color={COLORS.primary} />
-            <Text style={[styles.cartBadgeText, { color: COLORS.primary }]}>{itemCount}</Text>
-          </View>
-        </View>
-        
-        <TouchableOpacity 
-          style={styles.headerSearchBar} 
-          onPress={() => navigation.navigate('ProductList', {})}
-          activeOpacity={0.9}
-        >
-          <SearchIcon size={20} color="#666" />
-          <Text style={[styles.headerSearchPlaceholder, { marginLeft: 8 }]}>Search products...</Text>
-        </TouchableOpacity>
-      </GlassView>
+      <HomeHeader
+        onSearchPress={handleSearchPress}
+        userAvatar={user?.avatar}
+        userName={user?.firstName || 'Guest'}
+        isOnline={true}
+      />
 
       {loading ? (
         <HomeSkeleton />
@@ -238,9 +310,15 @@ export default function HomeScreen() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={COLORS.primary}
+              colors={[COLORS.primary]}
+            />
           }
           drawDistance={500}
+          estimatedItemSize={300}
         />
       )}
     </View>
@@ -250,76 +328,21 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.cream,
-  },
-  header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    marginBottom: 10,
-    borderRadius: 0,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  headerTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-  },
-  cartBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  cartBadgeText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  headerSearchBar: {
-    backgroundColor: 'rgba(255,255,255,0.7)', 
-    padding: 14,
-    borderRadius: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerSearchPlaceholder: {
-    color: '#666',
-    fontSize: 15,
-    fontWeight: '500',
+    backgroundColor: COLORS.background,
   },
   content: {
     paddingBottom: 100,
-    paddingTop: 10,
   },
-  welcomeContainer: {
-    paddingHorizontal: 20,
-  },
-  welcomeBox: {
-    marginBottom: 25,
-    marginTop: 10,
-    padding: 20,
-  },
-  welcomeTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    marginBottom: 5,
-  },
-  welcomeText: {
-    fontSize: 15,
-    color: '#666',
-  },
-  productRow: {
-    flexDirection: 'row',
-    alignItems: 'stretch', // Stretch to equal height
-    paddingHorizontal: 10,
-    gap: 10,
+  sectionTitleContainer: {
+    marginHorizontal: 20,
     marginBottom: 15,
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  sectionTitleText: {
+    fontFamily: FONTS.serif.semiBold,
+    fontSize: 20,
+    color: COLORS.primary,
   },
 });

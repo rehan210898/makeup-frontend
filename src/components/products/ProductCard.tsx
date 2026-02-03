@@ -1,7 +1,8 @@
 import React, { memo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { COLORS } from '../../constants';
+import { FONTS } from '../../constants/fonts';
 import { Product } from '../../types';
 import HeartIcon from '../icons/HeartIcon';
 import StarIcon from '../icons/StarIcon';
@@ -14,50 +15,32 @@ interface ProductCardProps {
   isWishlisted?: boolean;
   hidePrice?: boolean;
   variant?: 'default' | 'compact';
+  index?: number; // Used for pastel background color rotation
 }
 
-const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false, hidePrice = false, variant = 'default' }: ProductCardProps) => {
+// Get pastel background color based on index or product id
+const getPastelColor = (index: number, productId: number): string => {
+  const colorIndex = index >= 0 ? index : productId;
+  return COLORS.pastels[colorIndex % COLORS.pastels.length];
+};
+
+const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false, hidePrice = false, variant = 'default', index = -1 }: ProductCardProps) => {
   const inStock = item.inStock ?? true;
-  
+  const isCompact = variant === 'compact';
+
   const regularPriceVal = item.regularPrice ? parseFloat(item.regularPrice) : 0;
   const priceVal = item.price ? parseFloat(item.price) : 0;
-  
+
   const isDiscounted = item.onSale || (regularPriceVal > priceVal);
-  
+
   const discountPercent = (regularPriceVal > 0 && regularPriceVal > priceVal)
     ? Math.round(((regularPriceVal - priceVal) / regularPriceVal) * 100)
     : 0;
-    
+
   const rating = item.averageRating ? parseFloat(item.averageRating) : 0;
 
-  if (variant === 'compact') {
-    return (
-      <TouchableOpacity
-        style={styles.compactContainer}
-        onPress={() => onPress(item.id)}
-        activeOpacity={0.9}
-      >
-        <View style={styles.compactImageContainer}>
-          <Image
-            source={{ uri: item.images?.[0]?.src }}
-            style={styles.image}
-            contentFit="contain"
-            transition={300}
-            placeholder={{ blurhash: 'L9AB*A%LPqyuI~IpIVaK00?b~qD%' }}
-          />
-        </View>
-        <View style={styles.compactDetails}>
-           <Text style={styles.compactName} numberOfLines={1}>{item.name}</Text>
-           <View style={styles.compactPriceRow}>
-             <Text style={styles.compactPrice}>₹{item.price}</Text>
-             {isDiscounted && (
-                <Text style={styles.compactDiscount}>{discountPercent}% off</Text>
-             )}
-           </View>
-        </View>
-      </TouchableOpacity>
-    );
-  }
+  // Get pastel background color
+  const pastelBgColor = getPastelColor(index, item.id);
 
   return (
     <TouchableOpacity
@@ -65,7 +48,7 @@ const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false, hid
       onPress={() => onPress(item.id)}
       activeOpacity={0.9}
     >
-      <View style={styles.imageContainer}>
+      <View style={[styles.imageContainer, { backgroundColor: pastelBgColor }]}>
         <Image
           source={{ uri: item.images?.[0]?.src }}
           style={styles.image}
@@ -73,62 +56,62 @@ const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false, hid
           contentPosition="center"
           transition={300}
           cachePolicy="memory-disk"
-          placeholder={{ blurhash: 'L9AB*A%LPqyuI~IpIVaK00?b~qD%' }} // Simple gray blurhash as placeholder
+          placeholder={{ blurhash: 'L9AB*A%LPqyuI~IpIVaK00?b~qD%' }}
         />
         
-        {!hidePrice && rating > 3 && (
-            <View style={styles.ratingBadge}>
-                <Text style={styles.ratingText}>{rating.toFixed(1)}</Text>
-                <View style={{ marginLeft: 2 }}>
-                  <StarIcon size={10} color="green" filled />
-                </View>
-            </View>
-        )}
-
+        {/* 1. Top Left: Wishlist */}
         {!hidePrice && onWishlistPress && (
           <TouchableOpacity
-            style={styles.wishlistBtn}
+            style={[styles.wishlistBtn, isCompact && styles.compactWishlistBtn]}
             onPress={(e) => {
               e.stopPropagation();
               onWishlistPress(item.id);
             }}
           >
-            <HeartIcon size={16} color={isWishlisted ? COLORS.error : COLORS.primary} filled={isWishlisted} />
+            <HeartIcon size={isCompact ? 12 : 16} color={isWishlisted ? COLORS.error : COLORS.primary} filled={isWishlisted} />
           </TouchableOpacity>
+        )}
+
+        {/* 2. Top Right: Review (Rating) */}
+        {!hidePrice && rating > 0 && (
+            <View style={[styles.ratingBadge, isCompact && styles.compactRatingBadge]}>
+                <Text style={[styles.ratingText, isCompact && styles.compactRatingText]}>{rating.toFixed(1)}</Text>
+                <StarIcon size={isCompact ? 8 : 10} color={COLORS.black} filled />
+            </View>
         )}
 
         {!hidePrice && !inStock && (
             <View style={styles.outOfStockBadge}>
-                <Text style={styles.outOfStockText}>Out of Stock</Text>
+                <Text style={[styles.outOfStockText, isCompact && styles.compactOutOfStockText]}>Out of Stock</Text>
             </View>
         )}
       </View>
 
       {!hidePrice && (
-      <View style={styles.details}>
-        <Text style={styles.name} numberOfLines={2}>{item.name}</Text>
+      <View style={[styles.details, isCompact && styles.compactDetails]}>
+        <Text style={[styles.name, isCompact && styles.compactName]} numberOfLines={2}>{item.name}</Text>
         
-        <View style={styles.priceContainer}>
-          <View style={styles.priceLeft}>
-            <View style={styles.currentPriceRow}>
-              <IndianRupeeIcon size={16} color={COLORS.primary} />
-              <Text style={styles.price}>{item.price}</Text>
-            </View>
-            
-            {isDiscounted && item.regularPrice && (
-              <View style={styles.discountInfo}>
-                <Text style={styles.regularPrice}>₹{item.regularPrice}</Text>
-                <Text style={styles.discountText}>{discountPercent}% off</Text>
-              </View>
-            )}
+        {/* 3. Bottom Left: Price Stack */}
+        <View style={styles.priceBlock}>
+          <View style={styles.offerPriceRow}>
+             <IndianRupeeIcon size={isCompact ? 12 : 14} color={COLORS.primary} />
+             <Text style={[styles.offerPrice, isCompact && styles.compactOfferPrice]}>{item.price}</Text>
           </View>
-
-          {isDiscounted && (
-            <View style={styles.saleBadge}>
-              <Text style={styles.saleBadgeText}>SALE</Text>
+          
+          {isDiscounted && item.regularPrice && (
+            <View style={styles.originalPriceRow}>
+              <Text style={[styles.originalPrice, isCompact && styles.compactOriginalPrice]}>₹{item.regularPrice}</Text>
+              <Text style={[styles.discountText, isCompact && styles.compactDiscountText]}>{discountPercent}% OFF</Text>
             </View>
           )}
         </View>
+
+        {/* 4. Bottom Right: Creative Sale Badge (Moved to details) */}
+        {isDiscounted && (
+            <View style={[styles.creativeSaleBadge, isCompact && styles.compactSaleBadge]}>
+                <Text style={[styles.creativeSaleText, isCompact && styles.compactSaleText]}>SALE</Text>
+            </View>
+        )}
       </View>
       )}
     </TouchableOpacity>
@@ -137,27 +120,22 @@ const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false, hid
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1, // Ensure card takes full available height in a stretched row
+    flex: 1,
     width: '100%',
     backgroundColor: COLORS.white,
     borderRadius: 12,
-    marginBottom: 0, // Margin is handled by parent gap/padding
+    marginBottom: 0,
     borderWidth: 1,
     borderColor: 'rgba(102, 31, 29, 0.08)',
     overflow: 'hidden',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 3,
   },
   imageContainer: {
     width: '100%',
-    aspectRatio: 1, // Keep square
+    aspectRatio: 1,
     backgroundColor: COLORS.white,
     position: 'relative',
     overflow: 'hidden',
-    padding: 12, // Add padding to constrain the contained image size
+    padding: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -165,44 +143,78 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  // Badges
   wishlistBtn: {
     position: 'absolute',
-    top: 10,
-    left: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
     zIndex: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  compactWishlistBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    top: 6,
+    left: 6,
   },
   ratingBadge: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    top: 8,
+    right: 8,
+    backgroundColor: '#FFC107', // Yellow
     paddingHorizontal: 6,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
     zIndex: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    gap: 2,
+  },
+  compactRatingBadge: {
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    top: 6,
+    right: 6,
   },
   ratingText: {
     fontSize: 10,
-    fontWeight: 'bold',
-    color: 'green',
+    fontWeight: '700',
+    color: COLORS.black,
+  },
+  creativeSaleBadge: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    backgroundColor: '#FFC107', // Yellow
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    zIndex: 10,
+    transform: [{ rotate: '-5deg' }],
+    shadowColor: '#000',
+    shadowOffset: { width: 1, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  compactSaleBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    bottom: 6,
+    right: 6,
+  },
+  creativeSaleText: {
+    color: COLORS.black,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.5,
   },
   outOfStockBadge: {
     position: 'absolute',
@@ -214,6 +226,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
+    zIndex: 20,
   },
   outOfStockText: {
     color: COLORS.error,
@@ -221,100 +234,72 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textTransform: 'uppercase',
   },
+  compactOutOfStockText: {
+    fontSize: 8,
+  },
+  
+  // Details
   details: {
     padding: 10,
-  },
-  name: {
-    fontSize: 12,
-    color: COLORS.primary,
-    fontWeight: '500',
-    marginBottom: 8,
-    lineHeight: 16,
-    height: 32,
-  },
-  priceContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-  },
-  priceLeft: {
-    flex: 1,
-  },
-  currentPriceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  price: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    marginLeft: 2,
-  },
-  discountInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  regularPrice: {
-    fontSize: 11,
-    color: COLORS.gray[400],
-    textDecorationLine: 'line-through',
-  },
-  discountText: {
-    fontSize: 11,
-    color: 'green',
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-  saleBadge: {
-    backgroundColor: '#FFE5E5',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  saleBadgeText: {
-    color: COLORS.error,
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  compactContainer: {
-    width: '100%',
-    backgroundColor: COLORS.white,
-    borderRadius: 8,
-    marginBottom: 0,
-    overflow: 'hidden',
-    // Minimal shadow
-  },
-  compactImageContainer: {
-    width: '100%',
-    aspectRatio: 1,
-    backgroundColor: '#f9f9f9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 5,
+    paddingTop: 8,
   },
   compactDetails: {
-    padding: 6,
+    padding: 8,
+    paddingTop: 6,
+  },
+  name: {
+    fontFamily: FONTS.display.medium,
+    fontSize: 13,
+    color: COLORS.text.main,
+    marginBottom: 6,
+    lineHeight: 18,
+    height: 36,
   },
   compactName: {
     fontSize: 11,
-    color: COLORS.primary,
+    lineHeight: 15,
+    height: 30,
     marginBottom: 4,
   },
-  compactPriceRow: {
+  priceBlock: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  offerPriceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    marginBottom: 2,
   },
-  compactPrice: {
-    fontSize: 12,
-    fontWeight: 'bold',
+  offerPrice: {
+    fontFamily: FONTS.display.bold,
+    fontSize: 16,
     color: COLORS.primary,
+    marginLeft: 2,
   },
-  compactDiscount: {
+  compactOfferPrice: {
+    fontSize: 13,
+  },
+  originalPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  originalPrice: {
+    fontSize: 12,
+    color: COLORS.gray[400],
+    textDecorationLine: 'line-through',
+    fontFamily: FONTS.display.medium,
+  },
+  compactOriginalPrice: {
     fontSize: 10,
-    color: 'green',
-    fontWeight: 'bold',
+  },
+  discountText: {
+    fontFamily: FONTS.display.bold,
+    fontSize: 11,
+    color: COLORS.success,
+  },
+  compactDiscountText: {
+    fontSize: 9,
   },
 });
 
