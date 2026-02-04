@@ -3,11 +3,13 @@ import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from '@react-navigation/native';
 import { COLORS } from '../../constants';
+import { FONTS } from '../../constants/fonts';
 import productService from '../../services/productService';
 import categoryService from '../../services/categoryService';
 import { Product } from '../../types';
 import ProductCard from '../products/ProductCard';
 import { ProductCardSkeleton } from '../skeletons/ProductCardSkeleton';
+import { useWishlistStore } from '../../store/wishlistStore';
 
 interface ProductSliderSectionProps {
   title?: string;
@@ -28,6 +30,7 @@ const ProductSliderSectionComponent: React.FC<ProductSliderSectionProps> = ({ ti
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation<any>();
+  const { items: wishlistItems, addItem, removeItem } = useWishlistStore();
 
   const isCompactSlider = layout === 'slider_2_5';
   const CARD_WIDTH = isCompactSlider ? (width / 2.5) : (width / 2) - 20;
@@ -120,21 +123,34 @@ const ProductSliderSectionComponent: React.FC<ProductSliderSectionProps> = ({ ti
     navigation.navigate('ProductDetail', { productId: id });
   }, [navigation]);
 
+  const toggleWishlist = useCallback((id: number) => {
+    const isWishlisted = wishlistItems.some(item => item.id === id);
+    if (isWishlisted) {
+      removeItem(id);
+    } else {
+      const product = products.find(p => p.id === id);
+      if (product) addItem(product);
+    }
+  }, [wishlistItems, products, addItem, removeItem]);
+
   const renderSkeletonItem = useCallback(() => (
     <View style={{ width: CARD_WIDTH, marginRight: GAP }}>
       <ProductCardSkeleton />
     </View>
   ), [CARD_WIDTH]);
 
-  const renderProductItem = useCallback(({ item }: { item: Product }) => (
+  const renderProductItem = useCallback(({ item, index }: { item: Product; index: number }) => (
     <View style={{ width: CARD_WIDTH, marginRight: GAP }}>
       <ProductCard
         item={item}
         onPress={handleProductPress}
+        onWishlistPress={toggleWishlist}
+        isWishlisted={wishlistItems.some(w => w.id === item.id)}
         hidePrice={!!images && images.length > 0}
+        index={index}
       />
     </View>
-  ), [CARD_WIDTH, handleProductPress, images]);
+  ), [CARD_WIDTH, handleProductPress, images, toggleWishlist, wishlistItems]);
 
   if (loading) {
     return (
@@ -144,7 +160,7 @@ const ProductSliderSectionComponent: React.FC<ProductSliderSectionProps> = ({ ti
             <Text style={styles.title}>{title}</Text>
           </View>
         ) : null}
-        <View style={{ height: 280 }}>
+        <View style={{ height: 320 }}>
           <FlashList
             horizontal
             data={[1, 2, 3]}
@@ -167,7 +183,7 @@ const ProductSliderSectionComponent: React.FC<ProductSliderSectionProps> = ({ ti
           <Text style={styles.title}>{title}</Text>
         </View>
       ) : null}
-      <View style={{ height: 280 }}>
+      <View style={{ height: 320 }}>
         <FlashList
           horizontal
           data={products}
@@ -212,8 +228,8 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   title: {
+    fontFamily: FONTS.serif.semiBold,
     fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.primary,
+    color: COLORS.text.main,
   },
 });

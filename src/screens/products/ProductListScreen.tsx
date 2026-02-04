@@ -78,7 +78,13 @@ export default function ProductListScreen() {
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const { addItem, getItemQuantity } = useCartStore();
-  const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlistStore();
+  const { addItem: addToWishlist, removeItem: removeFromWishlist } = useWishlistStore();
+  // Subscribe to wishlist items to trigger re-renders
+  const wishlistItems = useWishlistStore((state) => state.items);
+
+  const isInWishlist = useCallback((id: number) => {
+    return wishlistItems.some(p => p.id === id);
+  }, [wishlistItems]);
 
   useEffect(() => {
     navigation.setOptions({ headerShown: false }); // Hide default header
@@ -328,7 +334,7 @@ export default function ProductListScreen() {
     }
   };
 
-  const renderItem = useCallback(({ item }: { item: Product }) => {
+  const renderItem = ({ item }: { item: Product }) => {
     return (
       <View style={{ width: CARD_WIDTH }}>
         <ProductCard 
@@ -339,7 +345,7 @@ export default function ProductListScreen() {
         />
       </View>
     );
-  }, [isInWishlist, navigation]);
+  };
     
       const getItemLayout = useCallback(
         (data: any, index: number) => ({
@@ -352,16 +358,18 @@ export default function ProductListScreen() {
     
       return (
     <View style={styles.container}>
-      {/* Sticky Header with Search Bar */}
+      {/* Sticky Header with Search Bar - Updated to Match HomeHeader */}
       <View style={styles.stickyHeader}>
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <ArrowLeftIcon color={COLORS.cream} size={24} />
+            <ArrowLeftIcon color={COLORS.primary} size={24} />
           </TouchableOpacity>
           <View style={styles.searchContainer}>
+            <FilterIcon size={18} color={COLORS.text.muted} /> 
             <TextInput
               style={styles.searchInput}
               placeholder="Search products..."
+              placeholderTextColor={COLORS.text.muted}
               value={searchQuery}
               onChangeText={handleSearch}
               returnKeyType="search"
@@ -392,6 +400,7 @@ export default function ProductListScreen() {
                 <View style={styles.filterBadge} />
             )}
           </TouchableOpacity>
+
 
           {/* Active Filter Chips */}
           {Object.entries(selectedFilters).map(([key, ids]) => {
@@ -469,6 +478,7 @@ export default function ProductListScreen() {
       ) : (
         <Animated.FlatList
           data={products}
+          extraData={wishlistItems}
           renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}
           numColumns={2}
@@ -738,33 +748,41 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: HEADER_HEIGHT,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.white,
     zIndex: 1000,
     paddingTop: Platform.OS === 'ios' ? 40 : StatusBar.currentHeight,
     paddingHorizontal: 15,
     justifyContent: 'flex-end',
     paddingBottom: 10,
-    elevation: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    // Shadow only on Android/iOS if needed, but HomeHeader uses border
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
   },
   backBtn: {
-    padding: 5,
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#F5F5F5',
   },
   searchContainer: {
     flex: 1,
-    backgroundColor: COLORS.white,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    height: 40,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F7F7F7', // COLORS.backgroundSubtle
+    borderRadius: 25,
+    paddingHorizontal: 16,
+    height: 44,
+    gap: 10,
   },
   searchInput: {
-    fontSize: 16,
-    color: COLORS.primary,
+    flex: 1,
+    fontSize: 15,
+    color: COLORS.text.main,
+    height: '100%',
   },
   // New Filter Bar Styles
   filterBar: {

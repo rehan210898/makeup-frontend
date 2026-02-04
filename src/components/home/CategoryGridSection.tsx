@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native
 import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
 import { COLORS } from '../../constants';
+import { FONTS } from '../../constants/fonts';
 import categoryService from '../../services/categoryService';
 import { Category } from '../../types';
 
@@ -113,9 +114,9 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   title: {
+    fontFamily: FONTS.serif.semiBold,
     fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.primary,
+    color: COLORS.text.main,
   },
   listContent: {
     paddingHorizontal: 20,
@@ -142,8 +143,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.gray[200],
   },
   name: {
+    fontFamily: FONTS.display.medium,
     fontSize: 12,
-    color: COLORS.primary,
+    color: COLORS.text.main,
     textAlign: 'center',
   },
 });

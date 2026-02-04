@@ -13,20 +13,33 @@ export const API_CONFIG = {
   TIMEOUT: 30000,
 };
 
-// Colors
+// Colors - Stitch UI Pink/Magenta Theme
 export const COLORS = {
-  primary: '#661F1D',
-  primaryDark: '#4A1615',
-  primaryLight: '#852927',
-  cream: '#f9eceb',
-  creamDark: '#EBC2B5',
-  accent: '#D4AF37',
+  // Primary colors
+  primary: '#661F1D',           // Pink/Magenta (main brand color)
+  primaryDark: '#C2185B',       // Darker pink for pressed states
+  primaryLight: '#F06292',      // Lighter pink for accents
+  primarySoft: '#F8BBD0',       // Very soft pink for backgrounds
+
+  // Secondary/Accent colors
+  accent: '#D4AF37',            // Gold (kept from original)
   accentDark: '#C5A028',
-  accentLight: '#f9eceb',
+  accentLight: '#F4E09E',
+  secondary: '#D4AF37',         // Alias for accent
+  secondaryLight: '#F4E09E',
+
+  // Backgrounds
   white: '#FFFFFF',
   black: '#000000',
-  background: '#f9eceb',
+  background: '#FFFFFF',        // Clean white background
+  backgroundSubtle: '#FFF5F8',  // Subtle pink-tinted background
+  backgroundDark: '#211116',    // Dark mode / dark sections
+  cream: '#FFF5F8',             // Updated cream to pink-tinted
+  creamDark: '#F8BBD0',
+
+  // Grays
   gray: {
+    50: '#FAFAFA',
     100: '#F7F7F7',
     200: '#E5E5E5',
     300: '#D4D4D4',
@@ -37,15 +50,37 @@ export const COLORS = {
     800: '#262626',
     900: '#171717',
   },
+
+  // Text colors
   text: {
-    primary: '#171717',
-    secondary: '#525252',
-    muted: '#737373',
+    main: '#2D1B22',            // Dark text for headings
+    primary: '#2D1B22',
+    secondary: '#9A7B86',       // Muted pink-gray for secondary text
+    muted: '#9A7B86',
   },
+
+  // Status colors
   success: '#10B981',
   error: '#EF4444',
   warning: '#F59E0B',
   info: '#3B82F6',
+
+  // Online status
+  online: '#4CAF50',
+
+  // Pastel backgrounds for products
+  pastels: [
+    '#FFF0F5', // Lavender blush
+    '#F0FFF0', // Honeydew
+    '#FFF5EE', // Seashell
+    '#F0F8FF', // Alice blue
+    '#FFFAF0', // Floral white
+    '#F5FFFA', // Mint cream
+    '#FFF0F0', // Light pink
+    '#F0FFFF', // Azure
+    '#FFFFF0', // Ivory
+    '#FDF5E6', // Old lace
+  ],
 };
 
 // Storage Keys

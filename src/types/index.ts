@@ -397,26 +397,149 @@ export interface HeroBannerData {
   imageUrl: string;
   action?: {
     type: string;
-    target_id: number;
+    target_id?: number;
+    value?: string | number;
+    title?: string;
   };
 }
 
 export interface ProductListData {
   query_type: string;
-  api_params: any;
+  api_params?: any;
+  ids?: number[];
+  layout?: string;
+  images?: string[];
 }
 
 export interface CategoryGridData {
   ids?: number[];
+  images?: string[];
 }
 
 export interface SectionTitleData {
   text: string;
 }
 
-export interface HomeLayoutSection {
-  type: 'hero_banner' | 'section_title' | 'product_list' | 'category_grid' | 'micro_animation' | 'beauty_animation' | 'brand_grid';
+// New Stitch UI section data types
+export interface HeroCarouselSlide {
+  imageUrl: string;
+  badge?: {
+    text: string;
+    color?: string;
+  };
+  title: string;
+  titleAccent?: string;
+  description?: string;
+  ctaText?: string;
+  action?: {
+    type: string;
+    value: string | number;
+    title?: string;
+  };
+}
+
+export interface HeroCarouselData {
+  slides: HeroCarouselSlide[];
+  autoPlayInterval?: number;
+}
+
+export interface CategoryCirclesData {
+  ids?: number[];
+  images?: string[];
+}
+
+export interface PromoBannerData {
+  imageUrl: string;
+  title: string;
+  titleAccent?: string;
+  description?: string;
+  ctaText?: string;
+  action?: {
+    type: string;
+    value: string | number;
+    title?: string;
+  };
+  gradientColors?: string[];
+}
+
+export interface FlashSaleData {
+  endTime?: string;
+  products?: {
+    query_type: string;
+    api_params?: any;
+    ids?: number[];
+  };
+}
+
+export interface TrendingVideoItem {
+  id: string | number;
+  imageUrl: string;
+  title: string;
+  videoUrl?: string;
+}
+
+export interface TrendingVideosData {
+  videos: TrendingVideoItem[];
+}
+
+export interface TopRatedData {
+  query_type?: string;
+  api_params?: any;
+  ids?: number[];
+}
+
+export interface EditorsChoiceData {
+  query_type?: string;
+  api_params?: any;
+  ids?: number[];
+}
+
+export interface RewardCardData {
   title?: string;
-  data: HeroBannerData | ProductListData | SectionTitleData | CategoryGridData | any;
+  description?: string;
+  ctaText?: string;
+  ctaAction?: {
+    type: string;
+    value?: string;
+  };
+}
+
+// Union type for all section types
+export type HomeLayoutSectionType =
+  | 'hero_banner'
+  | 'section_title'
+  | 'product_list'
+  | 'category_grid'
+  | 'micro_animation'
+  | 'beauty_animation'
+  | 'brand_grid'
+  | 'hero_carousel'
+  | 'category_circles'
+  | 'promo_banner'
+  | 'flash_sale'
+  | 'trending_videos'
+  | 'top_rated'
+  | 'editors_choice'
+  | 'reward_card';
+
+export type HomeLayoutSectionData =
+  | HeroBannerData
+  | ProductListData
+  | SectionTitleData
+  | CategoryGridData
+  | HeroCarouselData
+  | CategoryCirclesData
+  | PromoBannerData
+  | FlashSaleData
+  | TrendingVideosData
+  | TopRatedData
+  | EditorsChoiceData
+  | RewardCardData
+  | any;
+
+export interface HomeLayoutSection {
+  type: HomeLayoutSectionType;
+  title?: string;
+  data: HomeLayoutSectionData;
   id?: string | number;
 }

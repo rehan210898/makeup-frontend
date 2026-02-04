@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native
 import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
 import { COLORS } from '../../constants';
+import { FONTS } from '../../constants/fonts';
 import BrandService, { Brand } from '../../services/BrandService';
 
 interface BrandGridSectionProps {
@@ -101,9 +102,9 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   title: {
+    fontFamily: FONTS.serif.semiBold,
     fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.primary,
+    color: COLORS.text.main,
   },
   listContent: {
     paddingHorizontal: 20,
@@ -134,13 +135,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   placeholderText: {
+    fontFamily: FONTS.display.bold,
     fontSize: 24,
     color: COLORS.primary,
-    fontWeight: 'bold',
   },
   name: {
+    fontFamily: FONTS.display.medium,
     fontSize: 12,
-    color: COLORS.primary,
+    color: COLORS.text.main,
     textAlign: 'center',
   },
 });

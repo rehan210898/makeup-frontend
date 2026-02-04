@@ -3,10 +3,12 @@ import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from '@react-navigation/native';
 import { COLORS } from '../../constants';
+import { FONTS } from '../../constants/fonts';
 import productService from '../../services/productService';
 import { Product } from '../../types';
 import ProductCard from '../products/ProductCard';
 import { ProductCardSkeleton } from '../skeletons/ProductCardSkeleton';
+import { useWishlistStore } from '../../store/wishlistStore';
 
 interface ProductGridSectionProps {
   title?: string;
@@ -27,6 +29,7 @@ const ProductGridSectionComponent: React.FC<ProductGridSectionProps> = ({ title,
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation<any>();
+  const { items: wishlistItems, addItem, removeItem } = useWishlistStore();
 
   useEffect(() => {
     loadProducts();
@@ -60,15 +63,28 @@ const ProductGridSectionComponent: React.FC<ProductGridSectionProps> = ({ title,
     navigation.navigate('ProductDetail', { productId: id });
   }, [navigation]);
 
-  const renderItem = useCallback(({ item }: { item: Product }) => (
+  const toggleWishlist = useCallback((id: number) => {
+    const isWishlisted = wishlistItems.some(item => item.id === id);
+    if (isWishlisted) {
+      removeItem(id);
+    } else {
+      const product = products.find(p => p.id === id);
+      if (product) addItem(product);
+    }
+  }, [wishlistItems, products, addItem, removeItem]);
+
+  const renderItem = useCallback(({ item, index }: { item: Product; index: number }) => (
     <View style={{ width: ITEM_WIDTH, marginBottom: GAP }}>
       <ProductCard
         item={item}
         onPress={handleProductPress}
+        onWishlistPress={toggleWishlist}
+        isWishlisted={wishlistItems.some(w => w.id === item.id)}
         variant="compact"
+        index={index}
       />
     </View>
-  ), [handleProductPress]);
+  ), [handleProductPress, toggleWishlist, wishlistItems]);
 
   const renderSkeletonItem = useCallback(() => (
     <View style={{ width: ITEM_WIDTH, marginBottom: GAP }}>
@@ -98,7 +114,7 @@ const ProductGridSectionComponent: React.FC<ProductGridSectionProps> = ({ title,
 
   if (!products.length) return null;
 
-  const gridHeight = Math.ceil(products.length / COLUMNS) * (ITEM_WIDTH * 1.4 + GAP);
+  const gridHeight = Math.ceil(products.length / COLUMNS) * (ITEM_WIDTH * 1.6 + GAP);
 
   return (
     <View style={[styles.container, withContainer && styles.withContainer]}>
@@ -141,11 +157,6 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     marginHorizontal: 15,
     paddingHorizontal: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.03)',
   },
@@ -153,8 +164,8 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   title: {
+    fontFamily: FONTS.serif.semiBold,
     fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.primary,
+    color: COLORS.text.main,
   },
 });

@@ -27,30 +27,37 @@ export default function CartScreen() {
     <TouchableOpacity 
       style={styles.cartItem}
       onPress={() => navigation.navigate('ProductDetail', { productId: item.product_id })}
-      activeOpacity={0.7}
+      activeOpacity={0.9}
     >
-      <Image
-        source={{ uri: item.product.images?.[0]?.src }}
-        style={styles.itemImage}
-        contentFit="cover"
-      />
+      <View style={styles.imageWrapper}>
+        <Image
+          source={{ uri: item.product.images?.[0]?.src }}
+          style={styles.itemImage}
+          contentFit="cover"
+        />
+      </View>
+      
       <View style={styles.itemDetails}>
         <View style={styles.itemHeader}>
           <Text style={styles.itemName} numberOfLines={2}>{item.product.name}</Text>
-          <TouchableOpacity onPress={() => removeItem(item.product_id, item.variation_id)}>
+          <TouchableOpacity 
+            style={styles.removeBtn}
+            onPress={() => removeItem(item.product_id, item.variation_id)}
+          >
             <Text style={styles.removeText}>✕</Text>
           </TouchableOpacity>
         </View>
         
         {item.selectedAttributes && (
           <Text style={styles.itemVariant}>
-            {Object.values(item.selectedAttributes).join(', ')}
+            {Object.values(item.selectedAttributes).join(' • ')}
           </Text>
         )}
+        
         {item.isStitched && (
-            <Text style={[styles.itemVariant, { color: COLORS.primary, fontWeight: '600', marginTop: 4 }]}>
-                + Stitched (+₹ 35)
-            </Text>
+            <View style={styles.stitchedBadge}>
+                <Text style={styles.stitchedText}>+ Stitched (+₹ 35)</Text>
+            </View>
         )}
         
         <View style={styles.itemFooter}>
@@ -120,15 +127,15 @@ export default function CartScreen() {
         </View>
       ) : (
         <>
-          <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
+          <ScrollView 
+            contentContainerStyle={styles.listContent} 
+            showsVerticalScrollIndicator={false}
+          >
              {items.map(item => (
                  <View key={`${item.product_id}-${item.variation_id || 'simple'}`}>
                      {renderCartItem({ item })}
                  </View>
              ))}
-             
-             {/* Space for footer */}
-             <View style={{height: 100}} />
           </ScrollView>
 
           <View style={styles.footer}>
@@ -160,7 +167,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAFAFA',
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
     paddingBottom: 20,
     paddingHorizontal: 20,
     backgroundColor: COLORS.white,
@@ -174,52 +181,65 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.primary,
     marginRight: 10,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   badge: {
-    backgroundColor: COLORS.accentLight,
-    paddingHorizontal: 10,
+    backgroundColor: COLORS.primarySoft,
+    paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 20,
   },
   badgeText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     color: COLORS.primary,
   },
   clearBtn: {
     marginLeft: 'auto',
   },
   clearText: {
-    color: COLORS.error,
+    color: COLORS.text.muted,
     fontSize: 14,
     fontWeight: '600',
   },
   listContent: {
     padding: 20,
-    paddingBottom: 250,
+    paddingBottom: 280, // Increased padding to avoid footer overlap
   },
   cartItem: {
     backgroundColor: COLORS.white,
-    borderRadius: 16,
-    padding: 12,
-    marginBottom: 15,
+    borderRadius: 20,
+    padding: 15,
+    marginBottom: 16,
     flexDirection: 'row',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F5F5F5',
+  },
+  imageWrapper: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+    borderRadius: 12,
+    backgroundColor: '#fff',
   },
   itemImage: {
-    width: 65,
-    height: 90,
+    width: 80,
+    height: 100,
     borderRadius: 12,
     backgroundColor: '#F5F5F5',
   },
   itemDetails: {
     flex: 1,
-    marginLeft: 15,
+    marginLeft: 16,
     justifyContent: 'space-between',
+    paddingVertical: 2,
   },
   itemHeader: {
     flexDirection: 'row',
@@ -229,37 +249,58 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 15,
     fontWeight: '600',
-    color: COLORS.primary,
+    color: COLORS.text.main,
     flex: 1,
-    marginRight: 10,
+    marginRight: 8,
+    lineHeight: 20,
+  },
+  removeBtn: {
+    padding: 4,
+    marginTop: -4,
+    marginRight: -4,
   },
   removeText: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#CCC',
-    padding: 5,
   },
   itemVariant: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 2,
+    fontSize: 13,
+    color: COLORS.text.muted,
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  stitchedBadge: {
+    backgroundColor: COLORS.primarySoft,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginTop: 6,
+  },
+  stitchedText: {
+    color: COLORS.primary,
+    fontSize: 11,
+    fontWeight: '600',
   },
   itemFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 12,
   },
   itemPrice: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '700',
     color: COLORS.primary,
   },
   qtyContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
-    padding: 2,
+    backgroundColor: '#F7F7F7',
+    borderRadius: 10,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: '#EEE',
   },
   qtyBtn: {
     width: 28,
@@ -267,105 +308,111 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: COLORS.white,
-    borderRadius: 6,
+    borderRadius: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
     elevation: 1,
   },
   qtyBtnText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: COLORS.primary,
   },
   disabledQtyBtn: {
-    backgroundColor: '#EEEEEE',
+    backgroundColor: '#F5F5F5',
+    elevation: 0,
   },
   disabledQtyBtnText: {
-    color: '#AAAAAA',
+    color: '#CCC',
   },
   qtyText: {
     paddingHorizontal: 12,
     fontWeight: '600',
     fontSize: 14,
+    color: COLORS.text.main,
+    minWidth: 40,
+    textAlign: 'center',
   },
   footer: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    bottom: 50, // Moved up to account for Tab Bar
+    left: 20,
+    right: 20,
     backgroundColor: COLORS.white,
     padding: 20,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 20,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderRadius: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
     elevation: 10,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.text.muted,
   },
   summaryValue: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
-    color: COLORS.primary,
+    color: COLORS.text.main,
   },
   divider: {
     height: 1,
     backgroundColor: '#F0F0F0',
-    marginVertical: 15,
+    marginVertical: 12,
   },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   totalLabel: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: COLORS.primary,
+    color: COLORS.text.main,
   },
   totalValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '800',
     color: COLORS.primary,
   },
   checkoutBtn: {
     backgroundColor: COLORS.primary,
     borderRadius: 16,
-    padding: 18,
+    padding: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
   checkoutBtnText: {
     color: COLORS.white,
     fontSize: 16,
     fontWeight: 'bold',
+    letterSpacing: 0.5,
   },
   checkoutBtnPrice: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: 'bold',
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    color: COLORS.primary,
+    fontSize: 15,
+    fontWeight: '700',
+    backgroundColor: COLORS.white,
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingVertical: 6,
+    borderRadius: 10,
+    overflow: 'hidden',
   },
   emptyCart: {
     flex: 1,
@@ -390,13 +437,18 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   shopBtn: {
-    backgroundColor: COLORS.accent,
-    paddingVertical: 14,
-    paddingHorizontal: 30,
-    borderRadius: 12,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 14,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   shopBtnText: {
-    color: COLORS.primary,
+    color: COLORS.white,
     fontWeight: 'bold',
     fontSize: 16,
   },

@@ -268,6 +268,12 @@ export const useCartStore = create<CartStore>()(
     {
       name: STORAGE_KEYS.CART,
       storage: createJSONStorage(() => AsyncStorage),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.itemCount = calculateItemCount(state.items);
+          state.subtotal = calculateSubtotal(state.items);
+        }
+      },
     }
   )
 );
