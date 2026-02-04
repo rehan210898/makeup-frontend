@@ -7,6 +7,7 @@ import productService from '../../services/productService';
 import { Product } from '../../types';
 import ProductCard from '../products/ProductCard';
 import { useWishlistStore } from '../../store/wishlistStore';
+import { SectionSkeleton } from '../skeletons/SectionSkeleton';
 
 interface FlashSaleSectionProps {
   title?: string;
@@ -121,6 +122,10 @@ export const FlashSaleSection: React.FC<FlashSaleSectionProps> = ({
       </View>
     );
   }, [handleProductPress, toggleWishlist, wishlistItems]);
+
+  if (loading) {
+    return <SectionSkeleton width={150} height={220} />;
+  }
 
   if (products.length === 0 && !loading) return null;
 

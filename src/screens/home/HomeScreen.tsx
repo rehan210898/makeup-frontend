@@ -248,15 +248,16 @@ export default function HomeScreen() {
             );
           }
 
+          const cardStyle = (item.data as any).card_style;
+
           return (
-            <View style={{ minHeight: 320 }}>
-              <ProductSliderSection
-                title={item.title || 'Products'}
-                dataSource={(item as any).dataSource}
-                images={(item.data as any).images}
-                layout={layoutType}
-              />
-            </View>
+            <ProductSliderSection
+              title={item.title || 'Products'}
+              dataSource={(item as any).dataSource}
+              images={(item.data as any).images}
+              layout={layoutType}
+              cardStyle={cardStyle}
+            />
           );
 
         case 'category_grid':

@@ -7,6 +7,7 @@ import productService from '../../services/productService';
 import { Product } from '../../types';
 import ProductCard from '../products/ProductCard';
 import { useWishlistStore } from '../../store/wishlistStore';
+import { SectionSkeleton } from '../skeletons/SectionSkeleton';
 
 interface EditorsChoiceSectionProps {
   title?: string;
@@ -79,6 +80,10 @@ export const EditorsChoiceSection: React.FC<EditorsChoiceSectionProps> = ({
       </View>
     );
   }, [handleProductPress, toggleWishlist, wishlistItems]);
+
+  if (loading) {
+      return <SectionSkeleton width={260} height={300} />;
+  }
 
   if (products.length === 0 && !loading) return null;
 

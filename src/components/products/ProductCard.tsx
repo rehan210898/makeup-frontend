@@ -14,7 +14,7 @@ interface ProductCardProps {
   onWishlistPress?: (id: number) => void;
   isWishlisted?: boolean;
   hidePrice?: boolean;
-  variant?: 'default' | 'compact';
+  variant?: 'default' | 'compact' | 'image_only';
   index?: number; // Used for pastel background color rotation
 }
 
@@ -27,6 +27,7 @@ const getPastelColor = (index: number, productId: number): string => {
 const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false, hidePrice = false, variant = 'default', index = -1 }: ProductCardProps) => {
   const inStock = item.inStock ?? true;
   const isCompact = variant === 'compact';
+  const isImageOnly = variant === 'image_only';
 
   const regularPriceVal = item.regularPrice ? parseFloat(item.regularPrice) : 0;
   const priceVal = item.price ? parseFloat(item.price) : 0;
@@ -44,15 +45,22 @@ const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false, hid
 
   return (
     <TouchableOpacity
-      style={styles.container}
+      style={[
+        styles.container, 
+        isImageOnly && styles.imageOnlyContainer
+      ]}
       onPress={() => onPress(item.id)}
       activeOpacity={0.9}
     >
-      <View style={[styles.imageContainer, { backgroundColor: pastelBgColor }]}>
+      <View style={[
+        styles.imageContainer, 
+        { backgroundColor: pastelBgColor },
+        isImageOnly && styles.imageOnlyImageContainer
+      ]}>
         <Image
           source={{ uri: item.images?.[0]?.src }}
-          style={styles.image}
-          contentFit="contain"
+          style={[styles.image, isImageOnly && styles.imageOnlyImage]}
+          contentFit="cover"
           contentPosition="center"
           transition={300}
           cachePolicy="memory-disk"
@@ -60,7 +68,7 @@ const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false, hid
         />
         
         {/* 1. Top Left: Wishlist */}
-        {!hidePrice && onWishlistPress && (
+        {!hidePrice && onWishlistPress && !isImageOnly && (
           <TouchableOpacity
             style={[styles.wishlistBtn, isCompact && styles.compactWishlistBtn]}
             onPress={(e) => {
@@ -73,21 +81,21 @@ const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false, hid
         )}
 
         {/* 2. Top Right: Review (Rating) */}
-        {!hidePrice && rating > 0 && (
+        {!hidePrice && rating > 0 && !isImageOnly && (
             <View style={[styles.ratingBadge, isCompact && styles.compactRatingBadge]}>
                 <Text style={[styles.ratingText, isCompact && styles.compactRatingText]}>{rating.toFixed(1)}</Text>
                 <StarIcon size={isCompact ? 8 : 10} color={COLORS.black} filled />
             </View>
         )}
 
-        {!hidePrice && !inStock && (
+        {!hidePrice && !inStock && !isImageOnly && (
             <View style={styles.outOfStockBadge}>
                 <Text style={[styles.outOfStockText, isCompact && styles.compactOutOfStockText]}>Out of Stock</Text>
             </View>
         )}
       </View>
 
-      {!hidePrice && (
+      {!hidePrice && !isImageOnly && (
       <View style={[styles.details, isCompact && styles.compactDetails]}>
         <Text style={[styles.name, isCompact && styles.compactName]} numberOfLines={2}>{item.name}</Text>
         
@@ -300,6 +308,23 @@ const styles = StyleSheet.create({
   },
   compactDiscountText: {
     fontSize: 9,
+  },
+  
+  // Image Only Variant Styles
+  imageOnlyContainer: {
+    borderWidth: 0,
+    borderRadius: 12,
+    backgroundColor: 'transparent',
+    overflow: 'visible',
+  },
+  imageOnlyImageContainer: {
+    padding: 0,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: COLORS.white, // Or keep pastel if desired, but usually image only means full bleed
+  },
+  imageOnlyImage: {
+    borderRadius: 12,
   },
 });
 

@@ -7,6 +7,7 @@ import productService from '../../services/productService';
 import { Product } from '../../types';
 import ProductCard from '../products/ProductCard';
 import { useWishlistStore } from '../../store/wishlistStore';
+import { SectionSkeleton } from '../skeletons/SectionSkeleton';
 
 interface TopRatedSectionProps {
   title?: string;
@@ -80,6 +81,10 @@ export const TopRatedSection: React.FC<TopRatedSectionProps> = ({
       </View>
     );
   }, [handleProductPress, toggleWishlist, wishlistItems]);
+
+  if (loading) {
+      return <SectionSkeleton width={140} height={200} />;
+  }
 
   if (products.length === 0 && !loading) return null;
 

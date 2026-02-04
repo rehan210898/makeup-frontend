@@ -22,6 +22,7 @@ export const CategoryCircleSection: React.FC<CategoryCircleSectionProps> = ({
 }) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
   const navigation = useNavigation<any>();
 
   useEffect(() => {
@@ -55,6 +56,8 @@ export const CategoryCircleSection: React.FC<CategoryCircleSectionProps> = ({
       }
     } catch (error) {
       console.error('Error loading categories:', error);
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -110,7 +113,25 @@ export const CategoryCircleSection: React.FC<CategoryCircleSectionProps> = ({
       </TouchableOpacity>
     );
   };
+    
+    const renderSkeleton = () => (
+        <View style={styles.container}>
+            <View style={styles.header}>
+                <View style={{ width: 120, height: 24, backgroundColor: COLORS.backgroundSubtle, borderRadius: 4 }} />
+                <View style={{ width: 60, height: 18, backgroundColor: COLORS.backgroundSubtle, borderRadius: 4 }} />
+            </View>
+            <View style={{ flexDirection: 'row', paddingHorizontal: 20 }}>
+                {[1, 2, 3, 4, 5].map((key) => (
+                    <View key={key} style={{ marginRight: 12, alignItems: 'center', width: 76 }}>
+                        <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: COLORS.backgroundSubtle, marginBottom: 8 }} />
+                        <View style={{ width: 50, height: 12, backgroundColor: COLORS.backgroundSubtle, borderRadius: 4 }} />
+                    </View>
+                ))}
+            </View>
+        </View>
+    );
 
+  if (loading) return renderSkeleton();
   if (!categories.length) return null;
 
   return (

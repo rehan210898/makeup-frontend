@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Dimensions, Linking } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants';
@@ -50,7 +50,9 @@ export const TrendingVideosSection: React.FC<TrendingVideosSectionProps> = ({
   onVideoPress,
 }) => {
   const handlePress = (video: VideoItem) => {
-    if (onVideoPress) {
+    if (video.videoUrl) {
+      Linking.openURL(video.videoUrl).catch(err => console.error("Couldn't load video", err));
+    } else if (onVideoPress) {
       onVideoPress(video);
     }
   };

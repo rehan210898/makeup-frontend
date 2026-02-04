@@ -21,12 +21,13 @@ interface ProductSliderSectionProps {
   };
   images?: string[];
   layout?: string;
+  cardStyle?: 'default' | 'compact' | 'image_only';
 }
 
 const { width } = Dimensions.get('window');
 const GAP = 20;
 
-const ProductSliderSectionComponent: React.FC<ProductSliderSectionProps> = ({ title, dataSource, images, layout }) => {
+const ProductSliderSectionComponent: React.FC<ProductSliderSectionProps> = ({ title, dataSource, images, layout, cardStyle }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation<any>();
@@ -147,10 +148,11 @@ const ProductSliderSectionComponent: React.FC<ProductSliderSectionProps> = ({ ti
         onWishlistPress={toggleWishlist}
         isWishlisted={wishlistItems.some(w => w.id === item.id)}
         hidePrice={!!images && images.length > 0}
+        variant={(cardStyle as any) || (isCompactSlider ? 'compact' : 'default')}
         index={index}
       />
     </View>
-  ), [CARD_WIDTH, handleProductPress, images, toggleWishlist, wishlistItems]);
+  ), [CARD_WIDTH, handleProductPress, images, toggleWishlist, wishlistItems, isCompactSlider, cardStyle]);
 
   if (loading) {
     return (
@@ -160,7 +162,7 @@ const ProductSliderSectionComponent: React.FC<ProductSliderSectionProps> = ({ ti
             <Text style={styles.title}>{title}</Text>
           </View>
         ) : null}
-        <View style={{ height: 320 }}>
+        <View>
           <FlashList
             horizontal
             data={[1, 2, 3]}
@@ -168,6 +170,7 @@ const ProductSliderSectionComponent: React.FC<ProductSliderSectionProps> = ({ ti
             renderItem={renderSkeletonItem}
             contentContainerStyle={styles.listContent}
             showsHorizontalScrollIndicator={false}
+            estimatedItemSize={CARD_WIDTH + GAP}
           />
         </View>
       </View>
@@ -183,7 +186,7 @@ const ProductSliderSectionComponent: React.FC<ProductSliderSectionProps> = ({ ti
           <Text style={styles.title}>{title}</Text>
         </View>
       ) : null}
-      <View style={{ height: 320 }}>
+      <View>
         <FlashList
           horizontal
           data={products}
@@ -194,6 +197,7 @@ const ProductSliderSectionComponent: React.FC<ProductSliderSectionProps> = ({ ti
           snapToInterval={CARD_WIDTH + GAP}
           decelerationRate="fast"
           snapToAlignment="start"
+          estimatedItemSize={CARD_WIDTH + GAP}
         />
       </View>
     </View>
@@ -205,6 +209,7 @@ export const ProductSliderSection = memo(ProductSliderSectionComponent, (prevPro
   return (
     prevProps.title === nextProps.title &&
     prevProps.layout === nextProps.layout &&
+    prevProps.cardStyle === nextProps.cardStyle &&
     JSON.stringify(prevProps.dataSource) === JSON.stringify(nextProps.dataSource) &&
     JSON.stringify(prevProps.images) === JSON.stringify(nextProps.images)
   );
