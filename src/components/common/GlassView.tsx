@@ -12,7 +12,7 @@ interface GlassViewProps {
 export const GlassView: React.FC<GlassViewProps> = ({ 
   children, 
   style, 
-  intensity = 50,
+  intensity = 30, // Slightly reduced default intensity for premium feel
   tint = 'light'
 }) => {
   return (
@@ -22,6 +22,10 @@ export const GlassView: React.FC<GlassViewProps> = ({
         tint={tint} 
         style={StyleSheet.absoluteFill} 
       />
+      <View style={[
+        StyleSheet.absoluteFill, 
+        { backgroundColor: tint === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.1)' } 
+      ]} />
       <View style={styles.content}>
         {children}
       </View>
@@ -34,22 +38,22 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden', // Required for BlurView to respect border radius
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
-    // Shadow for depth
+    borderColor: 'rgba(255, 255, 255, 0.2)', // Subtler border
+    // Soft Shadow for depth
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
       },
       android: {
-        elevation: 5,
+        elevation: 4,
       },
     }),
   },
   content: {
-    padding: 0, // Content container handles actual layout
+    padding: 0,
   },
 });
 

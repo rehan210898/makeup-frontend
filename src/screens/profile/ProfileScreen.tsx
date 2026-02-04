@@ -1,10 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Feather } from '@expo/vector-icons';
 import { COLORS } from '../../constants';
+import { FONTS } from '../../constants/fonts';
 import { RootStackParamList } from '../../navigation/types';
 import { useUserStore } from '../../store/userStore';
+import { GlassView } from '../../components/common/GlassView';
 
 type ProfileScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -35,18 +38,14 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { backgroundColor: COLORS.primary }]}>
-        <Text style={styles.headerTitle}>👤 Profile</Text>
-      </View>
-      
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {!isAuthenticated ? (
           <View style={styles.authContainer}>
             <Text style={styles.welcomeText}>Welcome to Fashion Store</Text>
             <Text style={styles.subText}>Sign in to manage your orders</Text>
             
             <TouchableOpacity 
-              style={[styles.button, { backgroundColor: COLORS.accent }]}
+              style={[styles.button, { backgroundColor: COLORS.primary }]}
               onPress={() => navigation.navigate('Login')}
             >
               <Text style={styles.buttonText}>Login</Text>
@@ -62,7 +61,7 @@ export default function ProfileScreen() {
         ) : (
           <View style={styles.profileContainer}>
             <View style={styles.userInfo}>
-              <View style={[styles.avatar, { backgroundColor: COLORS.accentLight }]}>
+              <View style={[styles.avatar, { backgroundColor: COLORS.accent }]}>
                 <Text style={styles.avatarText}>
                   {user?.firstName?.[0]?.toUpperCase() || 'U'}
                 </Text>
@@ -71,60 +70,72 @@ export default function ProfileScreen() {
               <Text style={styles.userEmail}>{user?.email}</Text>
             </View>
 
-            <View style={styles.menu}>
+            <GlassView style={styles.menuContainer}>
               <TouchableOpacity 
                 style={styles.menuItem}
                 onPress={() => navigation.navigate('EditProfile')}
               >
-                <Text style={styles.menuIcon}>👤</Text>
+                <View style={styles.iconBox}>
+                    <Feather name="user" size={20} color={COLORS.primary} />
+                </View>
                 <Text style={styles.menuText}>Personal Details</Text>
-                <Text style={styles.menuArrow}>→</Text>
+                <Feather name="chevron-right" size={20} color={COLORS.text.muted} />
               </TouchableOpacity>
 
               <TouchableOpacity 
                 style={styles.menuItem}
                 onPress={() => navigation.navigate('OrderHistory')}
               >
-                <Text style={styles.menuIcon}>📦</Text>
+                <View style={styles.iconBox}>
+                    <Feather name="package" size={20} color={COLORS.primary} />
+                </View>
                 <Text style={styles.menuText}>My Orders</Text>
-                <Text style={styles.menuArrow}>→</Text>
+                <Feather name="chevron-right" size={20} color={COLORS.text.muted} />
               </TouchableOpacity>
 
               <TouchableOpacity 
                 style={styles.menuItem}
                 onPress={() => navigation.navigate('Address')}
               >
-                <Text style={styles.menuIcon}>📍</Text>
+                <View style={styles.iconBox}>
+                    <Feather name="map-pin" size={20} color={COLORS.primary} />
+                </View>
                 <Text style={styles.menuText}>Manage Address</Text>
-                <Text style={styles.menuArrow}>→</Text>
+                <Feather name="chevron-right" size={20} color={COLORS.text.muted} />
               </TouchableOpacity>
 
               <TouchableOpacity 
                 style={styles.menuItem}
                 onPress={() => navigation.navigate('Wishlist')}
               >
-                <Text style={styles.menuIcon}>❤️</Text>
+                <View style={styles.iconBox}>
+                    <Feather name="heart" size={20} color={COLORS.primary} />
+                </View>
                 <Text style={styles.menuText}>Wishlist</Text>
-                <Text style={styles.menuArrow}>→</Text>
+                <Feather name="chevron-right" size={20} color={COLORS.text.muted} />
               </TouchableOpacity>
 
               <TouchableOpacity 
                 style={styles.menuItem}
                 onPress={() => navigation.navigate('ChangePassword')}
               >
-                <Text style={styles.menuIcon}>🔒</Text>
+                <View style={styles.iconBox}>
+                    <Feather name="lock" size={20} color={COLORS.primary} />
+                </View>
                 <Text style={styles.menuText}>Change Password</Text>
-                <Text style={styles.menuArrow}>→</Text>
+                <Feather name="chevron-right" size={20} color={COLORS.text.muted} />
               </TouchableOpacity>
 
               <TouchableOpacity 
                 style={[styles.menuItem, styles.logoutButton]}
                 onPress={handleLogout}
               >
-                <Text style={styles.menuIcon}>🚪</Text>
+                <View style={styles.iconBox}>
+                    <Feather name="log-out" size={20} color={COLORS.error} />
+                </View>
                 <Text style={[styles.menuText, { color: COLORS.error }]}>Logout</Text>
               </TouchableOpacity>
-            </View>
+            </GlassView>
           </View>
         )}
       </ScrollView>
@@ -135,60 +146,59 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.cream,
-  },
-  header: {
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.cream,
+    backgroundColor: COLORS.white,
   },
   content: {
     flexGrow: 1,
-    justifyContent: 'center',
     padding: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 100,
   },
   authContainer: {
     alignItems: 'center',
     width: '100%',
+    marginTop: 50,
   },
   welcomeText: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontFamily: FONTS.serif.bold,
     color: COLORS.primary,
     marginBottom: 10,
+    textAlign: 'center',
   },
   subText: {
     fontSize: 16,
-    color: '#666',
+    color: COLORS.text.secondary,
     marginBottom: 40,
+    fontFamily: FONTS.display.regular,
   },
   button: {
     width: '100%',
-    padding: 15,
-    borderRadius: 10,
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
     marginBottom: 15,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   buttonText: {
-    color: COLORS.primary,
+    color: COLORS.white,
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: FONTS.display.bold,
   },
   outlineButton: {
     width: '100%',
-    padding: 15,
-    borderRadius: 10,
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 1.5,
   },
   outlineButtonText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: FONTS.display.bold,
   },
   profileContainer: {
     width: '100%',
@@ -204,49 +214,57 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 15,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
   },
   avatarText: {
     fontSize: 40,
-    fontWeight: 'bold',
+    fontFamily: FONTS.serif.bold,
     color: COLORS.primary,
   },
   userName: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontFamily: FONTS.serif.bold,
     color: COLORS.primary,
     marginBottom: 5,
   },
   userEmail: {
     fontSize: 16,
-    color: '#666',
+    color: COLORS.text.secondary,
+    fontFamily: FONTS.display.medium,
   },
-  menu: {
-    backgroundColor: COLORS.white,
-    borderRadius: 15,
-    padding: 10,
+  menuContainer: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.8)',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
+    padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
-  menuIcon: {
-    fontSize: 20,
-    marginRight: 15,
+  iconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.backgroundSubtle,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
   },
   menuText: {
     fontSize: 16,
     flex: 1,
-    color: COLORS.primary,
-    fontWeight: '500',
-  },
-  menuArrow: {
-    fontSize: 20,
-    color: '#ccc',
+    color: COLORS.text.main,
+    fontFamily: FONTS.display.medium,
   },
   logoutButton: {
     borderBottomWidth: 0,
+    marginTop: 10,
   },
 });

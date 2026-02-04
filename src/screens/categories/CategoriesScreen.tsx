@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, Platform, TextInput } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { COLORS } from '../../constants';
@@ -7,6 +7,10 @@ import categoryService from '../../services/categoryService';
 import { Category } from '../../types';
 import { RootStackParamList } from '../../navigation/types';
 import { getIconForCategory } from '../../components/icons/CategoryIcons';
+import { useCartStore } from '../../store/cartStore';
+import CartIcon from '../../components/icons/CartIcon';
+import SearchIcon from '../../components/icons/SearchIcon';
+import { FONTS } from '../../constants/fonts';
 
 type CategoriesScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -15,6 +19,7 @@ export default function CategoriesScreen() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { itemCount } = useCartStore();
 
   useEffect(() => {
     loadCategories();
@@ -26,7 +31,7 @@ export default function CategoriesScreen() {
     
     try {
       const response = await categoryService.getCategories();
-      console.log('Categories response:', JSON.stringify(response.data?.[0], null, 2));
+      // console.log('Categories loaded');
       setCategories(response.data || []);
     } catch (err: any) {
       console.error('Error loading categories:', err);
@@ -62,9 +67,27 @@ export default function CategoriesScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: COLORS.primary }]}>
-        <Text style={styles.headerTitle}>📂 Categories</Text>
+      {/* Header Matching ProductList/Home Style */}
+      <View style={styles.header}>
+        <View style={styles.searchContainer}>
+            <SearchIcon size={18} color={COLORS.text.muted} />
+            <TextInput 
+                placeholder="Search categories..." 
+                placeholderTextColor={COLORS.text.muted}
+                style={styles.searchInput}
+                returnKeyType="search"
+                onSubmitEditing={(e) => navigation.push('ProductList', { search: e.nativeEvent.text })}
+            />
+        </View>
+
+        <TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'CartTab' } as any)} style={styles.cartBtn}>
+            <CartIcon size={24} color={COLORS.primary} />
+            {itemCount > 0 && (
+                <View style={styles.cartBadge}>
+                    <Text style={styles.cartBadgeText}>{itemCount}</Text>
+                </View>
+            )}
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -140,24 +163,68 @@ export default function CategoriesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: COLORS.white,
   },
   header: {
-    paddingTop: 50,
-    paddingBottom: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
+    paddingBottom: 15,
     paddingHorizontal: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+    zIndex: 100,
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.primary,
+  searchContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.backgroundSubtle,
+    borderRadius: 25,
+    paddingHorizontal: 16,
+    height: 44,
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
+    color: COLORS.text.main,
+    padding: 0,
+    fontFamily: FONTS.display.medium,
+  },
+  cartBtn: {
+    position: 'relative',
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    backgroundColor: COLORS.primary,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 2,
+    borderWidth: 1.5,
+    borderColor: COLORS.white,
+    zIndex: 10,
+  },
+  cartBadgeText: {
+    color: COLORS.white,
+    fontSize: 9,
+    fontFamily: FONTS.display.bold,
   },
   content: {
     padding: 15,
-    paddingBottom: 30, // Added padding to prevent overlapping with footer navigation
+    paddingBottom: 100, // Fixed padding
   },
   loadingContainer: {
     alignItems: 'center',
@@ -167,6 +234,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: COLORS.primary,
     fontSize: 14,
+    fontFamily: FONTS.display.medium,
   },
   errorBox: {
     backgroundColor: '#FEE2E2',
@@ -199,23 +267,24 @@ const styles = StyleSheet.create({
   categoriesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginHorizontal: -4, // Reduced margin for tighter packing
+    marginHorizontal: -5,
   },
   categoryCard: {
-    width: '31%', // Fits 3 columns comfortably (31 * 3 = 93 + margins)
-    margin: '1.1%', // Small gap
-    borderRadius: 12, // Slightly smaller radius for smaller cards
+    width: '31%', // Fits 3 columns
+    margin: '1.15%', 
+    borderRadius: 16,
     backgroundColor: COLORS.white,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 8,
+    elevation: 3,
     overflow: 'hidden',
+    marginBottom: 10,
   },
   imageContainer: {
     width: '100%',
-    height: 80, // Reduced height for 3-column layout
+    height: 90,
     backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
@@ -226,34 +295,24 @@ const styles = StyleSheet.create({
   },
   categoryIconBox: {
     width: '100%',
-    height: 80, // Match image height
+    height: 90,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.accentLight,
-  },
-  categoryIcon: {
-    fontSize: 32, // Smaller icon
+    backgroundColor: 'rgba(212, 175, 55, 0.1)',
   },
   categoryInfo: {
-    padding: 8, // Reduced padding
+    padding: 10,
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#F9F9F9',
+    borderTopColor: '#FAFAFA',
   },
   categoryName: {
     fontSize: 12,
-    fontWeight: 'bold',
-    color: COLORS.primary,
+    fontWeight: '600',
+    color: COLORS.text.main,
     textAlign: 'center',
     lineHeight: 16,
-    height: 32, // Fixed height for exactly 2 lines of text
-  },
-  categoryCount: {
-    fontSize: 12,
-    color: '#888',
-    backgroundColor: '#F5F5F5',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
+    height: 32,
+    fontFamily: FONTS.display.medium,
   },
 });

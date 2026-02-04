@@ -84,7 +84,7 @@ const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false, hid
         {!hidePrice && rating > 0 && !isImageOnly && (
             <View style={[styles.ratingBadge, isCompact && styles.compactRatingBadge]}>
                 <Text style={[styles.ratingText, isCompact && styles.compactRatingText]}>{rating.toFixed(1)}</Text>
-                <StarIcon size={isCompact ? 8 : 10} color={COLORS.black} filled />
+                <StarIcon size={isCompact ? 8 : 10} color="#4CAF50" filled />
             </View>
         )}
 
@@ -150,6 +150,7 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+    borderRadius: 8,
   },
   // Badges
   wishlistBtn: {
@@ -177,7 +178,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: '#FFC107', // Yellow
+    backgroundColor: 'rgba(255,255,255,0.9)', // White translucent for readability instead of yellow
     paddingHorizontal: 6,
     paddingVertical: 3,
     borderRadius: 6,
@@ -195,7 +196,7 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 10,
     fontWeight: '700',
-    color: COLORS.black,
+    color: '#4CAF50', // Green
   },
   creativeSaleBadge: {
     position: 'absolute',

@@ -58,7 +58,7 @@ export const useAddressAutoUpdate = ({ form, updateAddress }: AutoUpdateProps) =
                 // Validate with Zod before sending (Silent validation for auto-update)
                 const result = AddressSchema.safeParse(payload);
                 if (result.success) {
-                    console.log('🚀 Triggering Address Update. Payload:', JSON.stringify(payload));
+                    // console.log('🚀 Triggering Address Update');
                     updateAddress(payload);
                 } else {
                     console.log('⚠️ Address Invalid for Auto-Update:', result.error.issues[0].message);

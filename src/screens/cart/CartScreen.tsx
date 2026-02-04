@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Platf
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { COLORS } from '../../constants';
+import { FONTS } from '../../constants/fonts';
 import { useCartStore } from '../../store/cartStore';
 import { RootStackParamList } from '../../navigation/types';
 import { Image } from 'expo-image';
@@ -10,20 +11,33 @@ import { Image } from 'expo-image';
 type CartScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 const { width } = Dimensions.get('window');
 
+const formatCurrency = (price: string | number | undefined | null) => {
+  if (price === undefined || price === null) return '₹ 0.00';
+  const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+  if (isNaN(numPrice)) return '₹ 0.00';
+  return `₹ ${numPrice.toFixed(2)}`;
+};
+
 export default function CartScreen() {
   const navigation = useNavigation<CartScreenNavigationProp>();
   const { items, itemCount, subtotal, removeItem, updateQuantity, clearCart } = useCartStore();
 
-  const formatPrice = (price: string | number) => {
-    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
-    return `₹ ${numPrice.toFixed(2)}`;
-  };
-  
+  const totalRegular = items.reduce((sum, item) => {
+      const regPrice = item.variation?.regular_price || item.product.regularPrice || item.product.price;
+      const val = regPrice ? parseFloat(regPrice.toString()) : 0;
+      return sum + (val * item.quantity);
+  }, 0);
+
   const handleCheckout = () => {
     navigation.navigate('Checkout');
   };
 
-  const renderCartItem = ({ item }: { item: any }) => (
+  const renderCartItem = ({ item }: { item: any }) => {
+    const regularPrice = item.variation?.regular_price || item.product.regularPrice;
+    const price = item.variation?.price || item.product.price;
+    const isOnSale = regularPrice && parseFloat(regularPrice) > parseFloat(price);
+
+    return (
     <TouchableOpacity 
       style={styles.cartItem}
       onPress={() => navigation.navigate('ProductDetail', { productId: item.product_id })}
@@ -39,7 +53,7 @@ export default function CartScreen() {
       
       <View style={styles.itemDetails}>
         <View style={styles.itemHeader}>
-          <Text style={styles.itemName} numberOfLines={2}>{item.product.name}</Text>
+          <Text style={styles.itemName} numberOfLines={1}>{item.product.name}</Text>
           <TouchableOpacity 
             style={styles.removeBtn}
             onPress={() => removeItem(item.product_id, item.variation_id)}
@@ -61,7 +75,12 @@ export default function CartScreen() {
         )}
         
         <View style={styles.itemFooter}>
-          <Text style={styles.itemPrice}>{formatPrice(item.product.price)}</Text>
+          <View>
+              {isOnSale && (
+                  <Text style={styles.itemRegularPrice}>{formatCurrency(regularPrice)}</Text>
+              )}
+              <Text style={styles.itemPrice}>{formatCurrency(price)}</Text>
+          </View>
           
           <View style={styles.qtyContainer}>
             <TouchableOpacity 
@@ -98,6 +117,7 @@ export default function CartScreen() {
       </View>
     </TouchableOpacity>
   );
+  };
 
   return (
     <View style={styles.container}>
@@ -141,18 +161,28 @@ export default function CartScreen() {
           <View style={styles.footer}>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Subtotal</Text>
-              <Text style={styles.summaryValue}>{formatPrice(subtotal)}</Text>
+              <View style={{ alignItems: 'flex-end' }}>
+                 {totalRegular > subtotal && (
+                     <Text style={styles.summaryOriginal}>{formatCurrency(totalRegular)}</Text>
+                 )}
+                 <Text style={styles.summaryValue}>{formatCurrency(subtotal)}</Text>
+              </View>
             </View>
 
             <View style={styles.divider} />
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Total</Text>
-              <Text style={styles.totalValue}>{formatPrice(subtotal)}</Text>
+              <View style={{ alignItems: 'flex-end' }}>
+                 {totalRegular > subtotal && (
+                     <Text style={styles.totalOriginal}>{formatCurrency(totalRegular)}</Text>
+                 )}
+                 <Text style={styles.totalValue}>{formatCurrency(subtotal)}</Text>
+              </View>
             </View>
             
             <TouchableOpacity style={styles.checkoutBtn} onPress={handleCheckout}>
               <Text style={styles.checkoutBtnText}>Checkout</Text>
-              <Text style={styles.checkoutBtnPrice}>{formatPrice(subtotal)}</Text>
+              <Text style={styles.checkoutBtnPrice}>{formatCurrency(subtotal)}</Text>
             </TouchableOpacity>
           </View>
         </>
@@ -204,21 +234,21 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 20,
-    paddingBottom: 280, // Increased padding to avoid footer overlap
+    paddingBottom: 320, // Increased padding
   },
   cartItem: {
-    backgroundColor: COLORS.white,
-    borderRadius: 20,
-    padding: 15,
-    marginBottom: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)', // Glass-like opacity
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 12,
     flexDirection: 'row',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 2,
     borderWidth: 1,
-    borderColor: '#F5F5F5',
+    borderColor: 'rgba(255, 255, 255, 0.5)',
   },
   imageWrapper: {
     shadowColor: '#000',
@@ -226,18 +256,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
-    borderRadius: 12,
+    borderRadius: 10,
     backgroundColor: '#fff',
   },
   itemImage: {
-    width: 80,
-    height: 100,
-    borderRadius: 12,
+    width: 70, // Compact
+    height: 90, // Compact
+    borderRadius: 10,
     backgroundColor: '#F5F5F5',
   },
   itemDetails: {
     flex: 1,
-    marginLeft: 16,
+    marginLeft: 14,
     justifyContent: 'space-between',
     paddingVertical: 2,
   },
@@ -247,12 +277,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   itemName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     color: COLORS.text.main,
     flex: 1,
     marginRight: 8,
-    lineHeight: 20,
+    lineHeight: 18,
   },
   removeBtn: {
     padding: 4,
@@ -260,87 +290,90 @@ const styles = StyleSheet.create({
     marginRight: -4,
   },
   removeText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#CCC',
   },
   itemVariant: {
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.text.muted,
-    marginTop: 4,
+    marginTop: 2,
     fontWeight: '500',
   },
   stitchedBadge: {
     backgroundColor: COLORS.primarySoft,
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
-    marginTop: 6,
+    marginTop: 4,
   },
   stitchedText: {
     color: COLORS.primary,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
   },
   itemFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 8,
+  },
+  itemRegularPrice: {
+      fontSize: 12,
+      color: COLORS.text.muted,
+      textDecorationLine: 'line-through',
   },
   itemPrice: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     color: COLORS.primary,
   },
   qtyContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F7F7F7',
-    borderRadius: 10,
-    padding: 3,
-    borderWidth: 1,
-    borderColor: '#EEE',
+    backgroundColor: '#F0F0F0', // Slightly darker for glass contrast
+    borderRadius: 8,
+    padding: 2,
   },
   qtyBtn: {
-    width: 28,
-    height: 28,
+    width: 24,
+    height: 24,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: COLORS.white,
-    borderRadius: 8,
+    borderRadius: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowRadius: 1,
     elevation: 1,
   },
   qtyBtnText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: COLORS.primary,
   },
   disabledQtyBtn: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#E0E0E0',
     elevation: 0,
   },
   disabledQtyBtnText: {
-    color: '#CCC',
+    color: '#999',
   },
   qtyText: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 13,
     color: COLORS.text.main,
-    minWidth: 40,
+    minWidth: 30,
     textAlign: 'center',
   },
   footer: {
     position: 'absolute',
-    bottom: 50, // Moved up to account for Tab Bar
+    bottom: Platform.OS === 'ios' ? 90 : 70, // Moved up above Tab Bar (85/65) + 5
     left: 20,
     right: 20,
-    backgroundColor: COLORS.white,
+    backgroundColor: 'rgba(255,255,255,0.95)',
     padding: 20,
     borderRadius: 24,
     shadowColor: '#000',
@@ -349,7 +382,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 10,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: 'rgba(255,255,255,0.5)',
   },
   summaryRow: {
     flexDirection: 'row',
@@ -359,6 +392,12 @@ const styles = StyleSheet.create({
   summaryLabel: {
     fontSize: 14,
     color: COLORS.text.muted,
+  },
+  summaryOriginal: {
+      fontSize: 12,
+      color: COLORS.text.muted,
+      textDecorationLine: 'line-through',
+      marginBottom: 2,
   },
   summaryValue: {
     fontSize: 15,
@@ -379,6 +418,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.text.main,
+  },
+  totalOriginal: {
+      fontSize: 14,
+      color: COLORS.text.muted,
+      textDecorationLine: 'line-through',
+      marginBottom: 2,
   },
   totalValue: {
     fontSize: 22,

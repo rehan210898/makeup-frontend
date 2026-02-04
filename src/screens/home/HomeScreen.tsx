@@ -238,12 +238,14 @@ export default function HomeScreen() {
         case 'product_list':
           const layoutType = (item.data as any).layout;
 
-          if (layoutType && layoutType.startsWith('grid_3_col')) {
+          if (layoutType && (layoutType.startsWith('grid_3_col') || layoutType.startsWith('grid_2_col'))) {
             return (
               <ProductGridSection
                 title={item.title}
                 dataSource={(item as any).dataSource}
+                images={(item.data as any).images} // Pass images for override
                 withContainer={layoutType.includes('container')}
+                columns={layoutType.startsWith('grid_2_col') ? 2 : 3}
               />
             );
           }
@@ -255,7 +257,7 @@ export default function HomeScreen() {
               title={item.title || 'Products'}
               dataSource={(item as any).dataSource}
               images={(item.data as any).images}
-              layout={layoutType}
+              layout="slider_2_5"
               cardStyle={cardStyle}
             />
           );

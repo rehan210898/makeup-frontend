@@ -17,23 +17,25 @@ interface ProductGridSectionProps {
     ids?: number[];
   };
   withContainer?: boolean;
+  columns?: number;
+  images?: string[];
 }
 
 const { width } = Dimensions.get('window');
 const PADDING = 15;
 const GAP = 10;
-const COLUMNS = 3;
-const ITEM_WIDTH = Math.floor((width - (PADDING * 2) - (GAP * 2)) / COLUMNS);
 
-const ProductGridSectionComponent: React.FC<ProductGridSectionProps> = ({ title, dataSource, withContainer }) => {
+const ProductGridSectionComponent: React.FC<ProductGridSectionProps> = ({ title, dataSource, withContainer, columns = 3, images }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation<any>();
   const { items: wishlistItems, addItem, removeItem } = useWishlistStore();
 
+  const itemWidth = Math.floor((width - (PADDING * 2) - (GAP * (columns - 1))) / columns);
+
   useEffect(() => {
     loadProducts();
-  }, [dataSource]);
+  }, [dataSource, images]);
 
   const loadProducts = async () => {
     if (!dataSource || !dataSource.ids) {
@@ -49,7 +51,22 @@ const ProductGridSectionComponent: React.FC<ProductGridSectionProps> = ({ title,
 
       if (response && response.data) {
         const ids = dataSource.ids;
-        const sorted = response.data.sort((a: any, b: any) => ids.indexOf(a.id) - ids.indexOf(b.id));
+        let sorted = response.data.sort((a: any, b: any) => ids.indexOf(a.id) - ids.indexOf(b.id));
+
+        // Override images if provided
+        if (images && images.length > 0) {
+            sorted = sorted.map((p: any) => {
+                const originalIndex = ids.indexOf(p.id);
+                if (originalIndex !== -1 && images[originalIndex]) {
+                    return {
+                        ...p,
+                        images: [{ src: images[originalIndex] }] // Override main image
+                    };
+                }
+                return p;
+            });
+        }
+
         setProducts(sorted);
       }
     } catch (error) {
@@ -74,23 +91,24 @@ const ProductGridSectionComponent: React.FC<ProductGridSectionProps> = ({ title,
   }, [wishlistItems, products, addItem, removeItem]);
 
   const renderItem = useCallback(({ item, index }: { item: Product; index: number }) => (
-    <View style={{ width: ITEM_WIDTH, marginBottom: GAP }}>
+    <View style={{ width: itemWidth, marginBottom: GAP, marginRight: (index + 1) % columns === 0 ? 0 : GAP }}>
       <ProductCard
         item={item}
         onPress={handleProductPress}
         onWishlistPress={toggleWishlist}
         isWishlisted={wishlistItems.some(w => w.id === item.id)}
-        variant="compact"
+        variant="image_only"
+        hidePrice={true}
         index={index}
       />
     </View>
-  ), [handleProductPress, toggleWishlist, wishlistItems]);
+  ), [handleProductPress, toggleWishlist, wishlistItems, itemWidth, columns]);
 
   const renderSkeletonItem = useCallback(() => (
-    <View style={{ width: ITEM_WIDTH, marginBottom: GAP }}>
+    <View style={{ width: itemWidth, marginBottom: GAP, marginRight: GAP }}>
       <ProductCardSkeleton />
     </View>
-  ), []);
+  ), [itemWidth]);
 
   if (loading) {
     return (
@@ -103,9 +121,10 @@ const ProductGridSectionComponent: React.FC<ProductGridSectionProps> = ({ title,
         <View style={{ height: 200 }}>
           <FlashList
             data={[1, 2, 3]}
-            numColumns={COLUMNS}
+            numColumns={columns}
             renderItem={renderSkeletonItem}
             keyExtractor={(item) => item.toString()}
+            estimatedItemSize={itemWidth}
           />
         </View>
       </View>
@@ -114,7 +133,8 @@ const ProductGridSectionComponent: React.FC<ProductGridSectionProps> = ({ title,
 
   if (!products.length) return null;
 
-  const gridHeight = Math.ceil(products.length / COLUMNS) * (ITEM_WIDTH * 1.6 + GAP);
+  // Approx height calculation based on item width (Square items)
+  const gridHeight = Math.ceil(products.length / columns) * (itemWidth + GAP);
 
   return (
     <View style={[styles.container, withContainer && styles.withContainer]}>
@@ -127,10 +147,11 @@ const ProductGridSectionComponent: React.FC<ProductGridSectionProps> = ({ title,
       <View style={{ height: gridHeight, minHeight: 200 }}>
         <FlashList
           data={products}
-          numColumns={COLUMNS}
+          numColumns={columns}
           renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}
           scrollEnabled={false}
+          estimatedItemSize={itemWidth}
         />
       </View>
     </View>
@@ -142,7 +163,9 @@ export const ProductGridSection = memo(ProductGridSectionComponent, (prevProps, 
   return (
     prevProps.title === nextProps.title &&
     prevProps.withContainer === nextProps.withContainer &&
-    JSON.stringify(prevProps.dataSource) === JSON.stringify(nextProps.dataSource)
+    prevProps.columns === nextProps.columns &&
+    JSON.stringify(prevProps.dataSource) === JSON.stringify(nextProps.dataSource) &&
+    JSON.stringify(prevProps.images) === JSON.stringify(nextProps.images)
   );
 });
 

@@ -25,7 +25,7 @@ interface ProductSliderSectionProps {
 }
 
 const { width } = Dimensions.get('window');
-const GAP = 20;
+const GAP = 10;
 
 const ProductSliderSectionComponent: React.FC<ProductSliderSectionProps> = ({ title, dataSource, images, layout, cardStyle }) => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -33,11 +33,13 @@ const ProductSliderSectionComponent: React.FC<ProductSliderSectionProps> = ({ ti
   const navigation = useNavigation<any>();
   const { items: wishlistItems, addItem, removeItem } = useWishlistStore();
 
-  const isCompactSlider = layout === 'slider_2_5';
-  const CARD_WIDTH = isCompactSlider ? (width / 2.5) : (width / 2) - 20;
+    const isCompactSlider = layout === 'slider_2_5';
 
+    const CARD_WIDTH = isCompactSlider ? (width / 2.5) : (width / 2) - 20;
 
-  useEffect(() => {
+  
+
+    useEffect(() => {
     loadProducts();
   }, [dataSource, images]);
 

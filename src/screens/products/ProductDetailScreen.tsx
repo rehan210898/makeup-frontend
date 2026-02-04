@@ -20,6 +20,7 @@ import { RootStackParamList } from '../../navigation/types';
 import productService from '../../services/productService';
 import { Product, ProductVariation, Review } from '../../types';
 import { COLORS } from '../../constants';
+import { FONTS } from '../../constants/fonts';
 import { useCartStore } from '../../store/cartStore';
 import { useWishlistStore } from '../../store/wishlistStore';
 import Toast from 'react-native-toast-message';
@@ -99,16 +100,18 @@ export default function ProductDetailScreen() {
   const { addItem, getItemQuantity, itemCount } = useCartStore();
   const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlistStore();
 
-  const toggleWishlist = () => {
-    if (!product) return;
-    if (isInWishlist(product.id)) {
-      removeFromWishlist(product.id);
+  const toggleWishlist = (item: Product | null = product) => {
+    // Safety check: ensure item is a valid product object, not an event or other object
+    if (!item || !item.id || typeof item.id !== 'number') return;
+    
+    if (isInWishlist(item.id)) {
+      removeFromWishlist(item.id);
       Toast.show({
         type: 'success',
         text1: 'Removed from wishlist',
       });
     } else {
-      addToWishlist(product);
+      addToWishlist(item);
       Toast.show({
         type: 'success',
         text1: 'Added to wishlist',
@@ -156,6 +159,11 @@ export default function ProductDetailScreen() {
     }
   }, [currentImages]);
 
+  // ... (rest of methods)
+  
+  // ... (inside renderItem replacement in next step, but I can't split function logic easily without context. 
+  // I will just update the toggleWishlist definition here.)
+
   const loadProduct = async () => {
     try {
       setLoading(true);
@@ -202,8 +210,8 @@ export default function ProductDetailScreen() {
       
       loadInitialProducts(response.data.id, response.data.categories?.[0]?.id);
       loadReviews(productId);
-    } catch (error) {
-      console.error('Error loading product:', error);
+    } catch (error: any) {
+      console.error('Error loading product:', error.message || 'Unknown error');
       Toast.show({
         type: 'error',
         text1: 'Error',
@@ -219,8 +227,8 @@ export default function ProductDetailScreen() {
       setLoadingReviews(true);
       const response = await productService.getProductReviews(prodId, 1, 10);
       setReviews(response.data || []);
-    } catch (error) {
-      console.error('Error loading reviews:', error);
+    } catch (error: any) {
+      console.error('Error loading reviews:', error.message || 'Unknown error');
     } finally {
       setLoadingReviews(false);
     }
@@ -630,32 +638,32 @@ export default function ProductDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Platform.OS === 'ios' ? 50 : 40 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <ArrowLeftIcon color={COLORS.cream} size={24} />
+          <ArrowLeftIcon color={COLORS.primary} size={24} />
         </TouchableOpacity>
         
         <View style={styles.searchContainer}>
-            <SearchIcon size={18} color="#999" />
+            <SearchIcon size={18} color={COLORS.text.muted} />
             <TextInput 
-                placeholder="Search..." 
-                placeholderTextColor="#999"
+                placeholder="Search products..." 
+                placeholderTextColor={COLORS.text.muted}
                 style={styles.searchInput}
                 returnKeyType="search"
                 onSubmitEditing={(e) => navigation.push('ProductList', { search: e.nativeEvent.text })}
             />
         </View>
 
-        <TouchableOpacity onPress={toggleWishlist} style={styles.headerIconBtn}>
+        <TouchableOpacity onPress={() => toggleWishlist(product)} style={styles.headerIconBtn}>
             <HeartIcon 
                 size={24} 
-                color={product && isInWishlist(product.id) ? COLORS.error : COLORS.cream} 
+                color={COLORS.primary} 
                 filled={product && isInWishlist(product.id)} 
             />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'CartTab' } as any)} style={styles.cartBtn}>
-            <CartIcon size={24} color={COLORS.cream} />
+            <CartIcon size={24} color={COLORS.primary} />
             {itemCount > 0 && (
                 <View style={styles.cartBadge}>
                     <Text style={styles.cartBadgeText}>{itemCount}</Text>
@@ -668,7 +676,16 @@ export default function ProductDetailScreen() {
         ref={flatListRef}
         data={allProducts}
         keyExtractor={keyExtractor}
-        renderItem={({ item }) => <ProductCard item={item} onPress={handleProductPress} />}
+        renderItem={({ item }) => (
+          <View style={{ width: (width - 30) / 2, marginBottom: 10 }}>
+            <ProductCard 
+              item={item} 
+              onPress={handleProductPress}
+              isWishlisted={isInWishlist(item.id)}
+              onWishlistPress={() => toggleWishlist(item)}
+            /> 
+          </View>
+        )}
         numColumns={2}
         columnWrapperStyle={styles.columnWrapper}
         showsVerticalScrollIndicator={false}
@@ -896,7 +913,7 @@ export default function ProductDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.cream,
+    backgroundColor: COLORS.white, // Changed from cream to white for cleaner look
   },
   header: {
     paddingTop: 50,
@@ -905,15 +922,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+    zIndex: 100,
   },
   backBtn: {
-    width: 60,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   backBtnText: {
-    color: COLORS.cream,
-    fontSize: 16,
-    display: 'none', // hidden
+    display: 'none',
   },
   headerTitle: {
     display: 'none',
@@ -922,57 +943,72 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.white,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    height: 36,
+    backgroundColor: COLORS.backgroundSubtle,
+    borderRadius: 25,
+    paddingHorizontal: 16,
+    height: 44,
     marginHorizontal: 10,
   },
   searchInput: {
     flex: 1,
     marginLeft: 8,
     fontSize: 14,
-    color: COLORS.primary,
+    color: COLORS.text.main,
     padding: 0,
+    fontFamily: FONTS.display.medium,
   },
   cartBtn: {
     position: 'relative',
     padding: 5,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cartBadge: {
     position: 'absolute',
-    top: -2,
-    right: -2,
-    backgroundColor: 'red',
+    top: 0,
+    right: 0,
+    backgroundColor: COLORS.primary,
     minWidth: 16,
     height: 16,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 2,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderWidth: 1.5,
+    borderColor: COLORS.white,
+    zIndex: 10,
   },
   cartBadgeText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: 'bold',
+    color: COLORS.white,
+    fontSize: 9,
+    fontFamily: FONTS.display.bold,
+  },
+  headerIconBtn: {
+      padding: 5,
+      width: 40,
+      height: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 0,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.cream,
+    backgroundColor: COLORS.white,
   },
   loadingText: {
     marginTop: 10,
     color: COLORS.primary,
+    fontFamily: FONTS.display.medium,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.cream,
+    backgroundColor: COLORS.white,
     padding: 20,
   },
   errorText: {
@@ -996,60 +1032,16 @@ const styles = StyleSheet.create({
   columnWrapper: {
     justifyContent: 'space-between',
     paddingHorizontal: 10,
+    gap: 10, // Explicit gap
   },
   card: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
-    marginBottom: 15,
-    marginHorizontal: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    // Moved inline to renderItem for sizing, but styles here just in case
   },
   imageContainer: {
-    position: 'relative',
-    width: '100%',
-    aspectRatio: 0.7,
-    backgroundColor: '#F5F5F5',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    overflow: 'hidden',
+    // ...
   },
   cardImage: {
-    width: '100%',
-    height: '100%',
-  },
-  details: {
-    padding: 12,
-  },
-  name: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.primary,
-    marginBottom: 6,
-    height: 40,
-  },
-  price: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    marginBottom: 8,
-  },
-  saleTag: {
-    position: 'absolute',
-    bottom: 12,
-    right: 12,
-    backgroundColor: '#FFE5E5',
-    color: COLORS.error,
-    fontSize: 10,
-    fontWeight: 'bold',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    overflow: 'hidden',
+    // ...
   },
   carouselContainer: {
     backgroundColor: COLORS.white,
@@ -1071,40 +1063,47 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)', // Darker dots for white bg
     marginHorizontal: 4,
   },
   dotActive: {
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.primary,
     width: 24,
   },
   saleBadge: {
     position: 'absolute',
     top: 20,
     right: 20,
-    backgroundColor: '#FF4444',
+    backgroundColor: COLORS.accent, // Gold/Premium look
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 4,
+    borderRadius: 20, // Rounded pill
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   saleBadgeText: {
-    color: '#fff',
+    color: COLORS.white,
     fontSize: 12,
-    fontWeight: 'bold',
+    fontFamily: FONTS.display.bold,
+    letterSpacing: 0.5,
   },
   stockBadge: {
     position: 'absolute',
     top: 20,
     left: 20,
-    backgroundColor: '#666',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 4,
+    backdropFilter: 'blur(10px)',
   },
   stockBadgeText: {
     color: '#fff',
     fontSize: 12,
-    fontWeight: 'bold',
+    fontFamily: FONTS.display.bold,
   },
   contentContainer: {
     padding: 20,
@@ -1114,9 +1113,9 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    marginBottom: 12,
+    fontFamily: FONTS.serif.bold,
+    color: COLORS.text.main,
+    marginBottom: 8,
     lineHeight: 32,
   },
   priceRow: {
@@ -1126,18 +1125,19 @@ const styles = StyleSheet.create({
   },
   regularPrice: {
     fontSize: 16,
-    color: '#999',
+    color: COLORS.text.muted,
     textDecorationLine: 'line-through',
     marginRight: 8,
+    fontFamily: FONTS.display.regular,
   },
   discount: {
     fontSize: 14,
-    color: '#FF4444',
-    fontWeight: '600',
+    color: COLORS.error, // Red for discount is standard/good
+    fontFamily: FONTS.display.bold,
   },
   salePrice: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontFamily: FONTS.display.bold,
     color: COLORS.primary,
     marginBottom: 0,
   },
@@ -1145,6 +1145,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
+    marginTop: 8,
   },
   stars: {
     fontSize: 16,
@@ -1152,11 +1153,13 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.text.secondary,
+    fontFamily: FONTS.display.medium,
   },
   stockRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 8,
   },
   stockDot: {
     width: 8,
@@ -1171,23 +1174,25 @@ const styles = StyleSheet.create({
   stockText: {
     fontSize: 14,
     color: '#4CAF50',
-    fontWeight: '600',
+    fontFamily: FONTS.display.medium,
   },
   stockTextOut: {
     color: '#FF4444',
   },
   stockQuantity: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.text.secondary,
     marginLeft: 4,
+    fontFamily: FONTS.display.regular,
   },
   categoriesSection: {
     marginBottom: 20,
   },
   sectionLabel: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.text.secondary,
     marginBottom: 8,
+    fontFamily: FONTS.display.medium,
   },
   categoryTags: {
     flexDirection: 'row',
@@ -1195,29 +1200,32 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   categoryTag: {
-    backgroundColor: COLORS.accent,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    backgroundColor: 'rgba(212, 175, 55, 0.1)', // Subtle Gold
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(212, 175, 55, 0.2)',
   },
   categoryTagText: {
     fontSize: 12,
-    color: COLORS.primary,
-    fontWeight: '600',
+    color: COLORS.primary, // Darker text for readability
+    fontFamily: FONTS.display.medium,
   },
   section: {
     marginBottom: 24,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.primary,
+    fontFamily: FONTS.serif.semiBold,
+    color: COLORS.text.main,
     marginBottom: 12,
   },
   description: {
     fontSize: 15,
-    color: '#444',
+    color: COLORS.text.secondary,
     lineHeight: 24,
+    fontFamily: FONTS.display.regular,
   },
   reviewsHeader: {
     flexDirection: 'row',
@@ -1226,19 +1234,21 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   writeReviewBtn: {
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.white,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
   },
   writeReviewText: {
     color: COLORS.primary,
-    fontWeight: '600',
+    fontFamily: FONTS.display.medium,
     fontSize: 14,
   },
   ratingOverview: {
-    backgroundColor: COLORS.white,
-    borderRadius: 12,
+    backgroundColor: '#FAFAFA',
+    borderRadius: 16,
     padding: 20,
     marginBottom: 16,
     alignItems: 'center',
@@ -1248,7 +1258,7 @@ const styles = StyleSheet.create({
   },
   ratingNumber: {
     fontSize: 48,
-    fontWeight: 'bold',
+    fontFamily: FONTS.display.bold,
     color: COLORS.primary,
   },
   ratingStars: {
@@ -1257,28 +1267,30 @@ const styles = StyleSheet.create({
   },
   ratingCount: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.text.secondary,
+    fontFamily: FONTS.display.regular,
   },
   reviewForm: {
-    backgroundColor: COLORS.white,
-    borderRadius: 12,
+    backgroundColor: '#FAFAFA',
+    borderRadius: 16,
     padding: 16,
     marginBottom: 20,
   },
   formLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.primary,
+    fontFamily: FONTS.display.medium,
+    color: COLORS.text.main,
     marginBottom: 8,
     marginTop: 12,
   },
   input: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: COLORS.white,
     borderRadius: 8,
     padding: 12,
     fontSize: 15,
     borderWidth: 1,
     borderColor: '#e0e0e0',
+    fontFamily: FONTS.display.regular,
   },
   textArea: {
     height: 100,
@@ -1295,20 +1307,27 @@ const styles = StyleSheet.create({
   submitBtn: {
     backgroundColor: COLORS.primary,
     padding: 14,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
     marginTop: 16,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   submitBtnText: {
-    color: COLORS.cream,
+    color: COLORS.white,
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: FONTS.display.bold,
   },
   reviewItem: {
     backgroundColor: COLORS.white,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
   },
   reviewHeader: {
     flexDirection: 'row',
@@ -1318,21 +1337,22 @@ const styles = StyleSheet.create({
   },
   reviewAuthor: {
     fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.primary,
+    fontFamily: FONTS.display.medium,
+    color: COLORS.text.main,
   },
   reviewStars: {
     fontSize: 14,
   },
   reviewText: {
     fontSize: 14,
-    color: '#444',
+    color: COLORS.text.secondary,
     lineHeight: 22,
     marginBottom: 8,
+    fontFamily: FONTS.display.regular,
   },
   reviewDate: {
     fontSize: 12,
-    color: '#999',
+    color: COLORS.text.muted,
   },
   verifiedBadge: {
     marginTop: 8,
@@ -1345,13 +1365,14 @@ const styles = StyleSheet.create({
   verifiedText: {
     fontSize: 12,
     color: '#4CAF50',
-    fontWeight: '600',
+    fontFamily: FONTS.display.medium,
   },
   noReviews: {
     textAlign: 'center',
-    color: '#999',
+    color: COLORS.text.muted,
     fontSize: 14,
     paddingVertical: 20,
+    fontFamily: FONTS.display.regular,
   },
   loadingMore: {
     flexDirection: 'row',
@@ -1363,6 +1384,7 @@ const styles = StyleSheet.create({
   loadingMoreText: {
     fontSize: 14,
     color: COLORS.primary,
+    fontFamily: FONTS.display.medium,
   },
   shopLinkContainer: {
     alignItems: 'center',
@@ -1371,19 +1393,22 @@ const styles = StyleSheet.create({
   },
   shopLinkText: {
     fontSize: 16,
-    color: '#666',
+    color: COLORS.text.secondary,
     marginBottom: 16,
+    fontFamily: FONTS.display.regular,
   },
   shopLink: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.white,
     paddingHorizontal: 32,
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
   },
   shopLinkButtonText: {
-    color: COLORS.cream,
+    color: COLORS.primary,
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: FONTS.display.bold,
   },
   emptyContainer: {
     paddingVertical: 40,
@@ -1391,64 +1416,46 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: '#999',
+    color: COLORS.text.muted,
   },
   bottomBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: COLORS.white,
+    backgroundColor: 'rgba(255,255,255,0.95)', // Slightly translucent
     padding: 16,
+    paddingBottom: Platform.OS === 'ios' ? 25 : 16,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: '#f0f0f0',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 10,
   },
   bottomLeft: {
     flex: 1,
   },
   bottomPrice: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontFamily: FONTS.display.bold,
     color: COLORS.primary,
   },
   bottomOriginalPrice: {
     fontSize: 14,
-    color: '#999',
+    color: COLORS.text.muted,
     textDecorationLine: 'line-through',
+    fontFamily: FONTS.display.regular,
   },
   bottomDiscountText: {
     fontSize: 12,
-    color: 'green',
-    fontWeight: '600',
+    color: COLORS.error,
+    fontFamily: FONTS.display.bold,
     marginLeft: 6,
   },
-  headerIconBtn: {
-      padding: 5,
-      marginRight: 5,
-  },
-  addButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 8,
-    marginLeft: 12,
-  },
-  addButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  addButtonText: {
-    color: COLORS.cream,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
   priceWithIcon:{
-flexDirection: 'row',
-alignItems: 'center',
-// justifyContent: 'center'
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   stitchingContainer: {
     flexDirection: 'row',
@@ -1458,11 +1465,11 @@ alignItems: 'center',
   stitchingOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#eee',
     backgroundColor: COLORS.white,
   },
   stitchingOptionSelected: {
@@ -1471,19 +1478,19 @@ alignItems: 'center',
   },
   stitchingText: {
     fontSize: 14,
-    color: COLORS.primary,
-    fontWeight: '500',
+    color: COLORS.text.main,
+    fontFamily: FONTS.display.medium,
   },
   stitchingTextSelected: {
     color: COLORS.white,
-    fontWeight: 'bold',
+    fontFamily: FONTS.display.bold,
   },
   stitchingPrice: {
     flexDirection: 'row',
     alignItems: 'center',
     marginLeft: 6,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    paddingHorizontal: 4,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
   },
@@ -1491,52 +1498,63 @@ alignItems: 'center',
     fontSize: 12,
     color: COLORS.primary,
     marginLeft: 2,
-    fontWeight: '600',
+    fontFamily: FONTS.display.bold,
   },
   stitchingPriceTextSelected: {
     color: COLORS.white,
   },
   actionButtons: {
     flexDirection: 'row',
-    gap: 10,
-    flex: 2, // Take up more space than price
+    gap: 12,
+    flex: 2, 
     justifyContent: 'flex-end',
   },
   buyNowBtn: {
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    backgroundColor: COLORS.black, // Modern Black
+    borderWidth: 0,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12, // More rounded
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   buyNowText: {
-    color: COLORS.primary,
-    fontWeight: 'bold',
+    color: COLORS.white,
+    fontFamily: FONTS.display.bold,
     fontSize: 14,
   },
   addToCartBtn: {
     backgroundColor: COLORS.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   addToCartText: {
     color: COLORS.white,
-    fontWeight: 'bold',
+    fontFamily: FONTS.display.bold,
     fontSize: 14,
   },
   disabledActionBtn: {
-    backgroundColor: '#ccc',
-    borderColor: '#ccc',
+    backgroundColor: '#F5F5F5',
+    borderColor: '#F5F5F5',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   disabledText: {
-    color: '#666',
+    color: '#999',
   },
 });

@@ -4,6 +4,7 @@ import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import { COLORS } from '../../constants';
+import { FONTS } from '../../constants/fonts';
 import productService from '../../services/productService';
 import categoryService from '../../services/categoryService';
 import { Product, AttributeTaxonomy, AttributeTerm, Category, Tag } from '../../types';
@@ -14,18 +15,19 @@ import HeartIcon from '../../components/icons/HeartIcon';
 import ProductCard from '../../components/products/ProductCard';
 import ArrowLeftIcon from '../../components/icons/ArrowLeftIcon';
 import FilterIcon from '../../components/icons/FilterIcon';
+import CartIcon from '../../components/icons/CartIcon';
 import { ProductListSkeleton } from '../../components/skeletons/ProductListSkeleton';
 
 type ProductListRouteProp = RouteProp<RootStackParamList, 'ProductList'>;
 type ProductListNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 // Header Height Calculation
-const HEADER_HEIGHT = 90; // Reduced height since elements are in one row
-const FILTER_BAR_HEIGHT = 60; // Height of the filter bar
+const HEADER_HEIGHT = 90; 
+const FILTER_BAR_HEIGHT = 60;
 const TOTAL_HEADER_HEIGHT = HEADER_HEIGHT + FILTER_BAR_HEIGHT;
 const PRODUCT_ITEM_HEIGHT = 320;
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 35) / 2; // (Width - 20px padding - 15px gap) / 2
+const CARD_WIDTH = (width - 30) / 2; // (Width - 20px padding - 10px gap) / 2
 
 export default function ProductListScreen() {
   const route = useRoute<ProductListRouteProp>();
@@ -39,7 +41,6 @@ export default function ProductListScreen() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [searchQuery, setSearchQuery] = useState(initialSearch || '');
-  // Treat passed categoryId as a filter that can be removed, not a permanent context
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
   
   const [activeSort, setActiveSort] = useState('popularity');
@@ -77,9 +78,8 @@ export default function ProductListScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  const { addItem, getItemQuantity } = useCartStore();
+  const { addItem, getItemQuantity, itemCount } = useCartStore();
   const { addItem: addToWishlist, removeItem: removeFromWishlist } = useWishlistStore();
-  // Subscribe to wishlist items to trigger re-renders
   const wishlistItems = useWishlistStore((state) => state.items);
 
   const isInWishlist = useCallback((id: number) => {
@@ -87,18 +87,16 @@ export default function ProductListScreen() {
   }, [wishlistItems]);
 
   useEffect(() => {
-    navigation.setOptions({ headerShown: false }); // Hide default header
+    navigation.setOptions({ headerShown: false });
     loadProducts(1, true);
-  }, [activeCategoryId, activeSort]); // Re-run when category or sort changes. Search triggers loadProducts manually.
+  }, [activeCategoryId, activeSort]);
 
-  // Load attributes if initial attribute filter is present so chips show up
   useEffect(() => {
     if (attribute) {
       loadAttributes();
     }
   }, [attribute]);
 
-  // Load terms for the specific attribute once attributes are loaded
   useEffect(() => {
     if (attribute && attributes.length > 0) {
       const attr = attributes.find(a => a.slug === attribute);
@@ -110,7 +108,7 @@ export default function ProductListScreen() {
 
   useEffect(() => {
     if (filterModalVisible) {
-      setTempFilters(selectedFilters); // Initialize temp filters with current selection
+      setTempFilters(selectedFilters);
       setTempPriceRange(priceRange);
       if (attributes.length === 0) loadAttributes();
       if (categories.length === 0) loadCategories();
@@ -128,8 +126,8 @@ export default function ProductListScreen() {
     try {
       const response = await categoryService.getCategories();
       setCategories(response.data || []);
-    } catch (error) {
-      console.error('Error loading categories:', error);
+    } catch (error: any) {
+      console.error('Error loading categories:', error.message || 'Unknown error');
     }
   };
 
@@ -137,8 +135,8 @@ export default function ProductListScreen() {
     try {
       const response = await productService.getTags();
       setTags(response.data || []);
-    } catch (error) {
-      console.error('Error loading tags:', error);
+    } catch (error: any) {
+      console.error('Error loading tags:', error.message || 'Unknown error');
     }
   };
 
@@ -149,8 +147,8 @@ export default function ProductListScreen() {
       if (response.data && response.data.length > 0) {
         setAttributes(response.data);
       }
-    } catch (error) {
-      console.error('Error loading attributes:', error);
+    } catch (error: any) {
+      console.error('Error loading attributes:', error.message || 'Unknown error');
     } finally {
       setLoadingFilters(false);
     }
@@ -161,14 +159,13 @@ export default function ProductListScreen() {
     try {
       const response = await productService.getAttributeTerms(id);
       setAttributeTerms(prev => ({ ...prev, [id]: response.data || [] }));
-    } catch (error) {
-      console.error('Error loading terms:', error);
+    } catch (error: any) {
+      console.error('Error loading terms:', error.message || 'Unknown error');
     } finally {
       setLoadingTerms(false);
     }
   };
 
-  // Animation Logic
   const diffClamp = Animated.diffClamp(scrollY, 0, FILTER_BAR_HEIGHT);
   const filterBarTranslateY = diffClamp.interpolate({
     inputRange: [0, FILTER_BAR_HEIGHT],
@@ -188,27 +185,21 @@ export default function ProductListScreen() {
         page: pageToLoad,
         per_page: 10,
         status: 'publish',
-        orderby: 'popularity', // default
+        orderby: 'popularity', 
         order: 'desc'
       };
 
-      // Determine effective filters
       const effectiveFilters = options?.filters || selectedFilters;
       const effectivePrice = options?.price || priceRange;
 
-      // Check if there are any ACTUAL filters selected (non-empty arrays OR price)
       const hasSelectedFilters = Object.values(effectiveFilters).some(arr => arr && arr.length > 0) || !!effectivePrice.min || !!effectivePrice.max;
       
       let effectiveCategory = options?.category !== undefined ? options.category : activeCategoryId;
       let effectiveSearch = options?.search !== undefined ? options.search : searchQuery;
 
-      // If we have filters, and no explicit override saying otherwise, we treat it as "Filter from All Products" (ignoring initial category context)
-      // UNLESS the filter IS the category filter, which is handled below.
       if (hasSelectedFilters && options === undefined) {
-         // Use the filters, ignore the stale category context unless explicitly kept?
-         // User requirement: "filter the products from all products" -> ignore base activeCategoryId
          effectiveCategory = null; 
-         effectiveSearch = ''; // "remove the search filter text"
+         effectiveSearch = ''; 
       }
 
       if (effectiveCategory) {
@@ -217,59 +208,37 @@ export default function ProductListScreen() {
         params.search = effectiveSearch;
       }
 
-      // Apply Price Range
       if (effectivePrice.min) params.min_price = effectivePrice.min;
       if (effectivePrice.max) params.max_price = effectivePrice.max;
 
-      // Apply Sort
       if (activeSort === 'popularity') { params.orderby = 'popularity'; params.order = 'desc'; }
       if (activeSort === 'date') { params.orderby = 'date'; params.order = 'desc'; }
       if (activeSort === 'price_asc') { params.orderby = 'price'; params.order = 'asc'; }
       if (activeSort === 'price_desc') { params.orderby = 'price'; params.order = 'desc'; }
 
-      // Apply Filters
-      // Handle Categories separately
       if (effectiveFilters['category'] && effectiveFilters['category'].length > 0) {
-         // If we selected a category in the filter, it overrides everything
          params.category = effectiveFilters['category'].join(',');
       }
 
-      // Handle Tags
       if (effectiveFilters['tag'] && effectiveFilters['tag'].length > 0) {
          params.tag = effectiveFilters['tag'].join(',');
       }
 
-      // Handle Attributes
-      // We need to construct attribute and attribute_term arrays or comma strings
-      // Since we modified selectedFilters to allow multiple, let's process them
       const attrParams: string[] = [];
       const termParams: string[] = [];
 
       Object.entries(effectiveFilters).forEach(([slug, terms]) => {
           if (slug !== 'category' && slug !== 'tag' && terms.length > 0) {
-              // Current implementation assumes ONE attribute set effectively or comma separated
-              // We will pass them as is. If multiple attributes are selected, we might need logic in BFF
-              // For now, let's just pass the first one found or all?
-              // Let's pass all.
               attrParams.push(slug);
               termParams.push(terms.join(','));
           }
       });
 
       if (attrParams.length > 0) {
-          // Pass as arrays if supported, or just the first one?
-          // Axios/BFF needs to handle this. Let's pass as simple properties if single, or repeated keys?
-          // To pass multiple same-key params in axios/params object, we need to use `URLSearchParams` or array?
-          // But `params` here is a simple object. 
-          // If we assign an array, axios usually formats as key[]=val.
-          // Let's try sending as comma separated if single, or array if multiple.
           if (attrParams.length === 1) {
               params.attribute = attrParams[0];
               params.attribute_term = termParams[0];
           } else {
-             // Fallback for multiple attributes: Use the first one or logic for multiple?
-             // BFF products.js uses `req.query`.
-             // If we send `attribute: ['pa_color', 'pa_size']`, BFF sees array.
              params.attribute = attrParams;
              params.attribute_term = termParams;
           }
@@ -291,8 +260,8 @@ export default function ProductListScreen() {
       });
       setPage(pageToLoad);
 
-    } catch (error) {
-      console.error('Error loading products:', error);
+    } catch (error: any) {
+      console.error('Error loading products:', error.message || 'Unknown error');
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -311,12 +280,11 @@ export default function ProductListScreen() {
 
   const handleSearch = (text: string) => {
     setSearchQuery(text);
-    setActiveCategoryId(null); // Clear category filter to allow global search
+    setActiveCategoryId(null); 
     
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
     
     searchTimeout.current = setTimeout(() => {
-      // We need to call loadProducts here, but since it uses state, we rely on the state being updated.
       loadProducts(1, true); 
     }, 500);
   };
@@ -336,7 +304,7 @@ export default function ProductListScreen() {
 
   const renderItem = ({ item }: { item: Product }) => {
     return (
-      <View style={{ width: CARD_WIDTH }}>
+      <View style={{ width: CARD_WIDTH, marginBottom: 10 }}>
         <ProductCard 
           item={item}
           onPress={handleProductPress}
@@ -347,18 +315,17 @@ export default function ProductListScreen() {
     );
   };
     
-      const getItemLayout = useCallback(
-        (data: any, index: number) => ({
-          length: PRODUCT_ITEM_HEIGHT,
-          offset: PRODUCT_ITEM_HEIGHT * index,
-          index,
-        }),
-        []
-      );
-    
-      return (
+  const getItemLayout = useCallback(
+    (data: any, index: number) => ({
+      length: PRODUCT_ITEM_HEIGHT,
+      offset: PRODUCT_ITEM_HEIGHT * index,
+      index,
+    }),
+    []
+  );
+
+  return (
     <View style={styles.container}>
-      {/* Sticky Header with Search Bar - Updated to Match HomeHeader */}
       <View style={styles.stickyHeader}>
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -375,10 +342,17 @@ export default function ProductListScreen() {
               returnKeyType="search"
             />
           </View>
+          <TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'CartTab' } as any)} style={styles.cartBtn}>
+            <CartIcon size={24} color={COLORS.primary} />
+            {itemCount > 0 && (
+                <View style={styles.cartBadge}>
+                    <Text style={styles.cartBadgeText}>{itemCount}</Text>
+                </View>
+            )}
+          </TouchableOpacity>
         </View>
       </View>
 
-      {/* New Sort & Filter Bar */}
       <Animated.View 
         style={[
           styles.filterBar,
@@ -390,7 +364,6 @@ export default function ProductListScreen() {
           showsHorizontalScrollIndicator={false} 
           contentContainerStyle={styles.filterScrollView}
         >
-          {/* Filter Trigger */}
           <TouchableOpacity 
             style={styles.filterBtn} 
             onPress={() => setFilterModalVisible(true)}
@@ -401,8 +374,6 @@ export default function ProductListScreen() {
             )}
           </TouchableOpacity>
 
-
-          {/* Active Filter Chips */}
           {Object.entries(selectedFilters).map(([key, ids]) => {
               if (!ids || ids.length === 0) return null;
               
@@ -411,7 +382,6 @@ export default function ProductListScreen() {
               
               if (key === 'category') {
                   items = categories;
-                  // If we have a categoryId from params and it matches, ensure we have the name even if categories aren't loaded
                   if (categoryId && categoryName && ids.includes(categoryId)) {
                       const exists = items.find(i => i.id === categoryId);
                       if (!exists) {
@@ -421,7 +391,6 @@ export default function ProductListScreen() {
               } else if (key === 'tag') {
                   items = tags;
               } else {
-                  // Attribute
                   const attr = attributes.find(a => a.slug === key);
                   if (attr) {
                       labelPrefix = `${attr.name}: `;
@@ -431,7 +400,6 @@ export default function ProductListScreen() {
               
               return ids.map(id => {
                   const item = items.find(i => i.id === id);
-                  // If item name not found (e.g. not loaded), show ID or nothing? Show nothing to avoid ugly UI.
                   if (!item) return null; 
                   
                   return (
@@ -442,7 +410,6 @@ export default function ProductListScreen() {
                             const current = selectedFilters[key] || [];
                             const newFilters = { ...selectedFilters, [key]: current.filter(i => i !== id) };
                             setSelectedFilters(newFilters);
-                            // Reload with new filters immediately
                             loadProducts(1, true, { filters: newFilters });
                         }}
                     >
@@ -452,7 +419,6 @@ export default function ProductListScreen() {
               });
           })}
 
-          {/* Sort Chips */}
           {sortOptions.map((option) => (
             <TouchableOpacity 
               key={option.value}
@@ -483,7 +449,7 @@ export default function ProductListScreen() {
           keyExtractor={(item) => item.id.toString()}
           numColumns={2}
           contentContainerStyle={{
-            paddingTop: TOTAL_HEADER_HEIGHT + 10, // Push content down below header + filter
+            paddingTop: TOTAL_HEADER_HEIGHT + 10, 
             paddingHorizontal: 10,
             paddingBottom: 20
           }}
@@ -494,10 +460,10 @@ export default function ProductListScreen() {
             [{ nativeEvent: { contentOffset: { y: scrollY } } }],
             { useNativeDriver: true }
           )}
-          maxToRenderPerBatch={10}
-          windowSize={10}
-          initialNumToRender={6}
-          removeClippedSubviews={Platform.OS === 'android'}
+          maxToRenderPerBatch={20}
+          windowSize={21}
+          initialNumToRender={10}
+          removeClippedSubviews={false}
           getItemLayout={getItemLayout}
           ListFooterComponent={loadingMore ? <ActivityIndicator color={COLORS.primary} /> : null}
           ListEmptyComponent={
@@ -508,7 +474,6 @@ export default function ProductListScreen() {
         />
       )}
 
-      {/* Filter Modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -526,7 +491,6 @@ export default function ProductListScreen() {
             
             <View style={styles.modalBody}>
               <View style={styles.filterContainer}>
-                {/* Left Side: Tabs */}
                 <View style={styles.filterSidebar}>
                     <FlatList
                         data={[
@@ -572,7 +536,6 @@ export default function ProductListScreen() {
                     />
                 </View>
 
-                {/* Right Side: Options */}
                 <View style={styles.filterContent}>
                     {activeTab === 'price' ? (
                         <View style={styles.priceFilterContainer}>
@@ -666,7 +629,7 @@ export default function ProductListScreen() {
                                 data={attributeTerms[activeTab as number] || []}
                                 keyExtractor={item => item.id.toString()}
                                 renderItem={({ item }) => {
-                                    if (item.count === 0) return null; // Remove zero stock/count items
+                                    if (item.count === 0) return null;
 
                                     const activeAttr = attributes.find(a => a.id === activeTab);
                                     if (!activeAttr) return null;
@@ -712,18 +675,13 @@ export default function ProductListScreen() {
                 setSelectedFilters(tempFilters);
                 setPriceRange(tempPriceRange);
                 
-                // When applying filters, user wants to filter from ALL products and clear any search text.
-                // Check if we have ANY non-empty filter arrays OR price
                 const hasActiveFilters = Object.values(tempFilters).some(arr => arr && arr.length > 0) || !!tempPriceRange.min || !!tempPriceRange.max;
                 
                 if (hasActiveFilters) {
                     setSearchQuery('');
                     setActiveCategoryId(null);
-                    // Pass overrides to loadProducts to ensure it uses these new values immediately
-                    // regardless of state update timing.
                     loadProducts(1, true, { category: null, search: '', filters: tempFilters, price: tempPriceRange });
                 } else {
-                    // Even if no filters, we need to reload to reflect the "cleared" state
                     loadProducts(1, true, { filters: tempFilters, price: tempPriceRange });
                 }
               }}
@@ -740,7 +698,7 @@ export default function ProductListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.cream,
+    backgroundColor: COLORS.white,
   },
   stickyHeader: {
     position: 'absolute',
@@ -755,24 +713,24 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    // Shadow only on Android/iOS if needed, but HomeHeader uses border
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   backBtn: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#F5F5F5',
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   searchContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F7F7F7', // COLORS.backgroundSubtle
+    backgroundColor: COLORS.backgroundSubtle,
     borderRadius: 25,
     paddingHorizontal: 16,
     height: 44,
@@ -783,19 +741,48 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLORS.text.main,
     height: '100%',
+    fontFamily: FONTS.display.medium,
   },
-  // New Filter Bar Styles
+  cartBtn: {
+    position: 'relative',
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    backgroundColor: COLORS.primary,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 2,
+    borderWidth: 1.5,
+    borderColor: COLORS.white,
+    zIndex: 10,
+  },
+  cartBadgeText: {
+    color: COLORS.white,
+    fontSize: 9,
+    fontFamily: FONTS.display.bold,
+  },
   filterBar: {
     position: 'absolute',
     top: HEADER_HEIGHT,
     left: 0,
     right: 0,
     height: FILTER_BAR_HEIGHT,
-    backgroundColor: COLORS.cream,
+    backgroundColor: COLORS.white,
     zIndex: 900,
-    elevation: 3,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
     justifyContent: 'center',
   },
   filterScrollView: {
@@ -811,7 +798,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 10,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#eee',
   },
   sortChip: {
     paddingHorizontal: 16,
@@ -820,7 +807,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#eee',
   },
   activeSortChip: {
     backgroundColor: COLORS.primary,
@@ -832,7 +819,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   activeSortText: {
-    color: COLORS.cream,
+    color: COLORS.white,
   },
   activeFilterChip: {
     paddingHorizontal: 12,
@@ -859,7 +846,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: COLORS.white,
   },
-  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -996,6 +982,7 @@ const styles = StyleSheet.create({
   },
   columnWrapper: {
     justifyContent: 'space-between',
+    gap: 10,
   },
   center: {
     flex: 1,
@@ -1003,7 +990,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: TOTAL_HEADER_HEIGHT + 50,
   },
-  // Updated Product Card Styles to match HomeScreen
   card: {
     flex: 1,
     backgroundColor: COLORS.white,
@@ -1077,9 +1063,9 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 16,
     borderBottomRightRadius: 16,
     alignItems: 'center',
-    marginTop: 0, // Removed top margin as it is now full width bottom
-    marginHorizontal: -12, // Stretch to edges
-    marginBottom: -12, // Stretch to edges
+    marginTop: 0, 
+    marginHorizontal: -12, 
+    marginBottom: -12, 
   },
   addBtnText: {
     color: COLORS.white,

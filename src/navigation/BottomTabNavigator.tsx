@@ -186,7 +186,7 @@ export default function BottomTabNavigator() {
         options={{
           tabBarLabel: 'Bag',
           tabBarIcon: ({ color, size, focused }) => (
-            <View>
+            <View style={{ width: size, height: size, overflow: 'visible' }}>
               <AnimatedTabIcon
                 IconComponent={CartIcon}
                 color={color}
@@ -226,7 +226,7 @@ export default function BottomTabNavigator() {
 const styles = StyleSheet.create({
   badge: {
     position: 'absolute',
-    top: -6,
+    top: -8,
     right: -10,
     backgroundColor: COLORS.primary,
     borderRadius: 10,
@@ -237,6 +237,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     borderWidth: 2,
     borderColor: COLORS.white,
+    zIndex: 10,
+    elevation: 5,
   },
   badgeText: {
     color: COLORS.white,
