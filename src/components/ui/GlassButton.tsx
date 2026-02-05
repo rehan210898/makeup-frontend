@@ -8,6 +8,7 @@ import Animated, {
   withSpring,
   withTiming,
   interpolate,
+  runOnJS,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
@@ -66,7 +67,7 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
       opacity.value = withTiming(1, { duration: 150 });
     })
     .onEnd(() => {
-      handlePress();
+      runOnJS(handlePress)();
     })
     .enabled(!disabled && !loading);
 

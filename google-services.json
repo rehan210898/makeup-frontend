@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "838801751755",
+    "project_id": "makeupocean-8446d",
+    "storage_bucket": "makeupocean-8446d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:838801751755:android:1fc359dff2e93268c6a54e",
+        "android_client_info": {
+          "package_name": "com.anonymous.ecommercemobileapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC8sxj8vddIUqudCzAz4-oeY2py5SEV7JY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
