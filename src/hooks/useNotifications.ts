@@ -14,10 +14,10 @@ export const useNotifications = () => {
 
   useEffect(() => {
     // Check if running in Expo Go
-    if (Constants.appOwnership === 'expo') {
-      console.log('⚠️ Push Notifications disabled in Expo Go');
-      return;
-    }
+    // if (Constants.appOwnership === 'expo') {
+    //   console.log('⚠️ Push Notifications disabled in Expo Go');
+    //   return;
+    // }
 
     // 1. Register for push notifications on mount
     NotificationService.registerForPushNotificationsAsync().then(token => {
