@@ -108,31 +108,37 @@ const verifyPayment = async (
 // Open Razorpay SDK
 const openRazorpay = (options: any): Promise<any> => {
   return new Promise((resolve, reject) => {
-    // Check if Native Module exists (It is null in Expo Go)
-    if (Platform.OS === 'web' || !NativeModules.RNRazorpay) {
-      console.warn('⚠️ Razorpay Native Module not found. Running in Mock Mode.');
-      Alert.alert(
-        'Dev Mode',
-        'Razorpay native module not found (Expo Go). Simulating successful payment.',
-        [{ text: 'OK' }]
-      );
+    if (Platform.OS === 'web') {
+      reject(new Error('Payments are not supported on web. Please use the mobile app.'));
+      return;
+    }
 
-      // Simulate network delay
-      setTimeout(() => {
-        resolve({
-          razorpay_payment_id: 'pay_mock_' + Date.now(),
-          razorpay_order_id: options.order_id,
-          razorpay_signature: 'mock_signature',
-          _isMock: true
-        });
-      }, 1000);
+    if (!RazorpayCheckout || !NativeModules.RNRazorpayCheckout) {
+      // Only allow mock in Expo Go (development), never in production builds
+      if (isExpoGo) {
+        console.warn('Razorpay Native Module not found (Expo Go). Simulating payment.');
+        Alert.alert(
+          'Dev Mode',
+          'Razorpay is unavailable in Expo Go. Simulating successful payment.',
+          [{ text: 'OK' }]
+        );
+        setTimeout(() => {
+          resolve({
+            razorpay_payment_id: 'pay_mock_' + Date.now(),
+            razorpay_order_id: options.order_id,
+            razorpay_signature: 'mock_signature',
+            _isMock: true
+          });
+        }, 1000);
+      } else {
+        reject(new Error('Payment module not available. Please update the app or try again.'));
+      }
       return;
     }
 
     RazorpayCheckout.open(options)
       .then((data: any) => resolve(data))
       .catch((error: any) => {
-        // Razorpay SDK error structure
         const errorMsg = error.description || error.message || 'Payment Cancelled';
         reject(new Error(errorMsg));
       });
@@ -171,7 +177,7 @@ export const startRazorpayCheckout = async (
   // 4. Open Razorpay UI
   const options = {
     description: razorpayConfig.description,
-    image: 'https://your-logo-url.com/logo.png', // Replace with dynamic config if available
+    image: razorpayConfig.image || 'https://makeupocean.com/wp-content/uploads/2024/01/logo.png',
     currency: razorpayConfig.currency,
     key: razorpayConfig.key_id, // Comes from backend now
     amount: razorpayConfig.amount, // in paise
@@ -187,21 +193,16 @@ export const startRazorpayCheckout = async (
 
   const paymentData = await openRazorpay(options);
 
-  // 5. Verify payment on backend (CRITICAL - skip for mock in dev)
-  if (!paymentData._isMock) {
-    try {
-      await verifyPayment(
-        paymentData.razorpay_order_id,
-        paymentData.razorpay_payment_id,
-        paymentData.razorpay_signature,
-        wcOrder.id
-      );
-    } catch (verifyError: any) {
-      // Payment was made but verification failed - log for reconciliation
-      console.error('Payment verification failed:', verifyError);
-      // Still return success to user as payment was captured by Razorpay
-      // Webhook will handle order update
-    }
+  // 5. Verify payment on backend (CRITICAL - never skip in production)
+  if (paymentData._isMock) {
+    console.warn('Mock payment - skipping server verification (dev only)');
+  } else {
+    await verifyPayment(
+      paymentData.razorpay_order_id,
+      paymentData.razorpay_payment_id,
+      paymentData.razorpay_signature,
+      wcOrder.id
+    );
   }
 
   // 6. Success

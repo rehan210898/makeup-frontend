@@ -5,17 +5,16 @@ import { Platform } from 'react-native';
 import ApiClient from './api';
 
 // Configure how notifications behave when the app is in foreground
-if (Constants.appOwnership !== 'expo') {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
-  });
-}
+// Works in dev-client and production builds (not Expo Go)
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 class NotificationService {
   /**

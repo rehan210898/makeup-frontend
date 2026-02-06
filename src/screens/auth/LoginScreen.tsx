@@ -107,7 +107,11 @@ export default function LoginScreen() {
   };
 
   const handleGoogleLogin = useCallback(async () => {
-    if (!request) {
+    // Prefer server-side OAuth flow (works in all environments including dev-client builds)
+    // The expo-auth-session flow requires valid client IDs per platform
+    const hasClientIds = GOOGLE_CLIENT_ID_WEB || GOOGLE_CLIENT_ID_ANDROID || GOOGLE_CLIENT_ID_IOS;
+
+    if (!hasClientIds || !request) {
       handleGoogleLoginFallback();
       return;
     }
@@ -125,7 +129,7 @@ export default function LoginScreen() {
   const handleGoogleLoginFallback = async () => {
     try {
       setGoogleLoading(true);
-      const redirectUrl = 'muoapp://auth/callback';
+      const redirectUrl = 'muoapp://auth-callback';
       const authUrl = `${API_CONFIG.BASE_URL}/auth/google?redirect_scheme=muoapp`;
 
       const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);

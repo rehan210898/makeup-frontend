@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as Linking from 'expo-linking';
 import { RootStackParamList } from './types';
+import { navigationRef } from './navigationRef';
 import BottomTabNavigator from './BottomTabNavigator';
 import SplashScreen from '../screens/SplashScreen';
 import ProductDetailScreen from '../screens/products/ProductDetailScreen';
@@ -45,7 +46,7 @@ const linking = {
 
 export default function RootNavigator() {
   return (
-    <NavigationContainer linking={linking}>
+    <NavigationContainer ref={navigationRef} linking={linking}>
       <Stack.Navigator
         initialRouteName="Splash"
         screenOptions={{

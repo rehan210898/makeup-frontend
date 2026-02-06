@@ -1,13 +1,15 @@
-// Force Cache Refresh
+import Constants from 'expo-constants';
+
 // API Configuration
-// NOTE: Replace 'https://your-backend-app.onrender.com' with your actual deployed URL after Step 1.
-const PROD_URL = 'https://woocommerce-bff-muo.onrender.com/api/v1'; 
+const PROD_URL = 'https://woocommerce-bff-muo.onrender.com/api/v1';
 // Ensure this IP matches your computer's IP address (ipconfig/ifconfig)
-const DEV_URL = 'http://192.168.2.105:3000/api/v1'; 
+const DEV_URL = 'http://192.168.1.224:3000/api/v1';
+
+// Use DEV_URL only in Expo Go during local development, PROD_URL for all builds
+const BASE_URL = __DEV__ && Constants.appOwnership === 'expo' ? DEV_URL : PROD_URL;
 
 export const API_CONFIG = {
-  // Force DEV_URL for now to debug
-  BASE_URL: DEV_URL, 
+  BASE_URL,
   API_KEY: '5aa92e6b5a9c561fff47ea95c872fc9b5c52652735029cb9fdf271eb9fc1e4fa',
   TIMEOUT: 30000,
 };

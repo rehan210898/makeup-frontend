@@ -144,17 +144,6 @@ export interface AttributeTerm {
   count: number;
 }
 
-// Cart Types
-export interface CartItem {
-  product_id: number;
-  variation_id?: number;
-  quantity: number;
-  product: Product;
-  variation?: ProductVariation;
-  selectedAttributes?: { [key: string]: string };
-  isStitched?: boolean;
-}
-
 export interface ShippingRate {
   rate_id: string;
   name: string;
