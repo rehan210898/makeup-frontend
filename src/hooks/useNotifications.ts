@@ -43,46 +43,12 @@ export const useNotifications = () => {
     });
 
     // 3. Listen for user interaction (tapping the notification)
-    responseListener.current = NotificationService.addNotificationResponseReceivedListener(response => {
-      const data = response.notification.request.content.data as any;
-      console.log('Notification Data:', data);
+    responseListener.current = NotificationService.addNotificationResponseReceivedListener(handleNotificationResponse);
 
-      // Priority 1: Direct deep link URL
-      if (data.click_action) {
-        Linking.openURL(data.click_action);
-        return;
-      }
-
-      // Priority 2: Screen-based navigation (campaign notifications)
-      if (data.screen) {
-        const screenName = SCREEN_MAP[data.screen] || data.screen;
-        const params = data.params || {};
-
-        // Map campaign param names to navigation param names
-        if (screenName === 'ProductList' && params.categoryId) {
-          navigate('ProductList', {
-            categoryId: params.categoryId,
-            categoryName: params.name || params.categoryName || '',
-          });
-        } else if (screenName === 'ProductDetail' && params.productId) {
-          navigate('ProductDetail', { productId: params.productId });
-        } else if (screenName === 'OrderTracking' && params.orderId) {
-          navigate('OrderTracking', { orderId: params.orderId });
-        } else {
-          navigate(screenName as any, params);
-        }
-        return;
-      }
-
-      // Priority 3: Typed notification payloads (order updates, promotions)
-      if (data.type === 'PROMOTION' && data.link) {
-        Linking.openURL(Linking.createURL(data.link));
-      } else if (data.type === 'ORDER_UPDATE' || data.type === 'ORDER_CONFIRMATION') {
-        if (data.orderId) {
-          navigate('OrderTracking', { orderId: data.orderId });
-        }
-      } else if (data.type === 'PRODUCT_RESTOCK' && data.productId) {
-        navigate('ProductDetail', { productId: data.productId });
+    // 4. Check if app was opened by a notification (Cold Start)
+    Notifications.getLastNotificationResponseAsync().then(response => {
+      if (response) {
+        handleNotificationResponse(response);
       }
     });
 
@@ -96,6 +62,49 @@ export const useNotifications = () => {
       }
     };
   }, []);
+
+  const handleNotificationResponse = (response: Notifications.NotificationResponse) => {
+    const data = response.notification.request.content.data as any;
+    console.log('Notification Data:', data);
+
+    // Priority 1: Direct deep link URL
+    if (data.click_action) {
+      Linking.openURL(data.click_action);
+      return;
+    }
+
+    // Priority 2: Screen-based navigation (campaign notifications)
+    if (data.screen) {
+      const screenName = SCREEN_MAP[data.screen] || data.screen;
+      const params = data.params || {};
+
+      // Map campaign param names to navigation param names
+      if (screenName === 'ProductList' && params.categoryId) {
+        navigate('ProductList', {
+          categoryId: params.categoryId,
+          categoryName: params.name || params.categoryName || '',
+        });
+      } else if (screenName === 'ProductDetail' && params.productId) {
+        navigate('ProductDetail', { productId: params.productId });
+      } else if (screenName === 'OrderTracking' && params.orderId) {
+        navigate('OrderTracking', { orderId: params.orderId });
+      } else {
+        navigate(screenName as any, params);
+      }
+      return;
+    }
+
+    // Priority 3: Typed notification payloads (order updates, promotions)
+    if (data.type === 'PROMOTION' && data.link) {
+      Linking.openURL(Linking.createURL(data.link));
+    } else if (data.type === 'ORDER_UPDATE' || data.type === 'ORDER_CONFIRMATION') {
+      if (data.orderId) {
+        navigate('OrderTracking', { orderId: data.orderId });
+      }
+    } else if (data.type === 'PRODUCT_RESTOCK' && data.productId) {
+      navigate('ProductDetail', { productId: data.productId });
+    }
+  };
 
   return {
     expoPushToken,

@@ -3,8 +3,8 @@ module.exports = function(api) {
   return {
     presets: ['babel-preset-expo'],
     plugins: [
-      'react-native-reanimated/plugin',
       process.env.NODE_ENV === 'production' ? 'transform-remove-console' : null,
+      'react-native-reanimated/plugin',
     ].filter(Boolean),
   };
 };
