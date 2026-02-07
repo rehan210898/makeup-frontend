@@ -8,6 +8,7 @@ import { FONTS } from '../../constants/fonts';
 import { RootStackParamList } from '../../navigation/types';
 import { useUserStore } from '../../store/userStore';
 import { GlassView } from '../../components/common/GlassView';
+import ArrowLeftIcon from '../../components/icons/ArrowLeftIcon';
 
 type ProfileScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -38,6 +39,14 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <ArrowLeftIcon size={24} color={COLORS.primary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Profile</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {!isAuthenticated ? (
           <View style={styles.authContainer}>
@@ -146,12 +155,32 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.cream,
+  },
+  header: {
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
+    paddingBottom: 15,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: COLORS.cream,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontFamily: FONTS.serif.bold,
+    color: COLORS.text.main,
   },
   content: {
     flexGrow: 1,
     padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingTop: 20,
     paddingBottom: 100,
   },
   authContainer: {
@@ -239,7 +268,7 @@ const styles = StyleSheet.create({
   menuContainer: {
     borderRadius: 20,
     overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.8)',
+    backgroundColor: 'rgba(255,255,255,1)',
   },
   menuItem: {
     flexDirection: 'row',

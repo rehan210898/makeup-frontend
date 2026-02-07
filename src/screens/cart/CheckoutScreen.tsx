@@ -12,6 +12,7 @@ import { useRazorpayPayment } from '../../hooks/useRazorpayPayment';
 import { useCartServer } from '../../hooks/useCartServer';
 import { AddressSchema } from '../../services/CartService';
 import { InfoIcon } from '../../components/icons/InfoIcon';
+import ArrowLeftIcon from '../../components/icons/ArrowLeftIcon';
 
 // Custom Hooks for Logic Extraction
 import { useCheckoutCalculations } from '../../hooks/useCheckoutCalculations';
@@ -297,10 +298,10 @@ export default function CheckoutScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backBtnText}>← Back</Text>
+          <ArrowLeftIcon size={24} color={COLORS.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Checkout</Text>
-        <View style={{ width: 60 }} />
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView 
@@ -729,19 +730,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.cream,
   },
   backBtn: {
-    width: 60,
-  },
-  backBtnText: {
-    color: COLORS.cream,
-    fontSize: 16,
+    width: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: COLORS.cream,
+    color: COLORS.text.main,
   },
   content: {
     flex: 1,

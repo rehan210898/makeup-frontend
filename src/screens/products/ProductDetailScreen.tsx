@@ -901,7 +901,7 @@ export default function ProductDetailScreen() {
             disabled={!isInStock}
           >
             <Text style={[styles.addToCartText, (!isInStock) && styles.disabledText]}>
-              {!isInStock ? 'Out of Stock' : cartQuantity > 0 ? 'Go to Cart' : '🛒 Add'}
+              {!isInStock ? 'Out of Stock' : cartQuantity > 0 ? 'Go to Cart' : 'Add to Cart'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -1074,20 +1074,23 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 20,
     right: 20,
-    backgroundColor: COLORS.accent, // Gold/Premium look
+    backgroundColor: '#FFC107', // Yellow
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 20, // Rounded pill
+    borderRadius: 4,
+    transform: [{ rotate: '-5deg' }],
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 1, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
     elevation: 3,
+    zIndex: 10,
   },
   saleBadgeText: {
-    color: COLORS.white,
+    color: COLORS.black,
     fontSize: 12,
     fontFamily: FONTS.display.bold,
+    fontWeight: '900',
     letterSpacing: 0.5,
   },
   stockBadge: {
@@ -1113,7 +1116,7 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: 24,
-    fontFamily: FONTS.serif.bold,
+    fontFamily: FONTS.display.medium,
     color: COLORS.text.main,
     marginBottom: 8,
     lineHeight: 32,
@@ -1132,7 +1135,7 @@ const styles = StyleSheet.create({
   },
   discount: {
     fontSize: 14,
-    color: COLORS.error, // Red for discount is standard/good
+    color: COLORS.success,
     fontFamily: FONTS.display.bold,
   },
   salePrice: {
@@ -1449,7 +1452,7 @@ const styles = StyleSheet.create({
   },
   bottomDiscountText: {
     fontSize: 12,
-    color: COLORS.error,
+    color: COLORS.success,
     fontFamily: FONTS.display.bold,
     marginLeft: 6,
   },

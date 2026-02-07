@@ -65,7 +65,7 @@ export default function WishlistScreen() {
             style={styles.moveToCartBtn}
             onPress={() => handleAddToCart(item)}
         >
-            <Text style={styles.moveToCartText}>Move to Bag</Text>
+            <Text style={styles.moveToCartText}>Add to Cart</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -115,7 +115,7 @@ export default function WishlistScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.cream,
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 60 : 50,
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.05)',
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.cream,
   },
   backBtn: {
     width: 40,

@@ -17,6 +17,7 @@ import ArrowLeftIcon from '../../components/icons/ArrowLeftIcon';
 import FilterIcon from '../../components/icons/FilterIcon';
 import CartIcon from '../../components/icons/CartIcon';
 import { ProductListSkeleton } from '../../components/skeletons/ProductListSkeleton';
+import SearchIcon from '../../components/icons/SearchIcon';
 
 type ProductListRouteProp = RouteProp<RootStackParamList, 'ProductList'>;
 type ProductListNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -332,7 +333,7 @@ export default function ProductListScreen() {
             <ArrowLeftIcon color={COLORS.primary} size={24} />
           </TouchableOpacity>
           <View style={styles.searchContainer}>
-            <FilterIcon size={18} color={COLORS.text.muted} /> 
+              <SearchIcon size={18} color={COLORS.text.muted} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search products..."

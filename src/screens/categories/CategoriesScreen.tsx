@@ -72,7 +72,7 @@ export default function CategoriesScreen() {
         <View style={styles.searchContainer}>
             <SearchIcon size={18} color={COLORS.text.muted} />
             <TextInput 
-                placeholder="Search categories..." 
+                placeholder="Search products..." 
                 placeholderTextColor={COLORS.text.muted}
                 style={styles.searchInput}
                 returnKeyType="search"

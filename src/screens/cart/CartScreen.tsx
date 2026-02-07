@@ -7,6 +7,8 @@ import { FONTS } from '../../constants/fonts';
 import { useCartStore } from '../../store/cartStore';
 import { RootStackParamList } from '../../navigation/types';
 import { Image } from 'expo-image';
+import HeartIcon from '../../components/icons/HeartIcon';
+import { Feather } from '@expo/vector-icons';
 
 type CartScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 const { width } = Dimensions.get('window');
@@ -77,7 +79,12 @@ export default function CartScreen() {
         <View style={styles.itemFooter}>
           <View>
               {isOnSale && (
-                  <Text style={styles.itemRegularPrice}>{formatCurrency(regularPrice)}</Text>
+                  <View style={{flexDirection: 'row', alignItems: 'center', gap: 6}}>
+                      <Text style={styles.itemRegularPrice}>{formatCurrency(regularPrice)}</Text>
+                      <Text style={styles.itemDiscountText}>
+                        {Math.round(((parseFloat(regularPrice) - parseFloat(price)) / parseFloat(regularPrice)) * 100)}% OFF
+                      </Text>
+                  </View>
               )}
               <Text style={styles.itemPrice}>{formatCurrency(price)}</Text>
           </View>
@@ -126,9 +133,19 @@ export default function CartScreen() {
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{itemCount} items</Text>
         </View>
+        
+        <View style={{flex: 1}} />
+
+        <TouchableOpacity 
+            onPress={() => navigation.navigate('Wishlist')} 
+            style={[styles.headerIconBtn, {marginRight: 10}]}
+        >
+            <HeartIcon size={24} color={COLORS.primary} />
+        </TouchableOpacity>
+
         {items.length > 0 && (
-          <TouchableOpacity onPress={clearCart} style={styles.clearBtn}>
-            <Text style={styles.clearText}>Clear</Text>
+          <TouchableOpacity onPress={clearCart} style={styles.headerIconBtn}>
+            <Feather name="trash-2" size={22} color={COLORS.text.muted} />
           </TouchableOpacity>
         )}
       </View>
@@ -159,22 +176,16 @@ export default function CartScreen() {
           </ScrollView>
 
           <View style={styles.footer}>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Subtotal</Text>
-              <View style={{ alignItems: 'flex-end' }}>
-                 {totalRegular > subtotal && (
-                     <Text style={styles.summaryOriginal}>{formatCurrency(totalRegular)}</Text>
-                 )}
-                 <Text style={styles.summaryValue}>{formatCurrency(subtotal)}</Text>
-              </View>
-            </View>
-
-            <View style={styles.divider} />
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Total</Text>
               <View style={{ alignItems: 'flex-end' }}>
                  {totalRegular > subtotal && (
-                     <Text style={styles.totalOriginal}>{formatCurrency(totalRegular)}</Text>
+                     <View style={{flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2}}>
+                         <Text style={styles.totalOriginal}>{formatCurrency(totalRegular)}</Text>
+                         <Text style={styles.totalDiscountText}>
+                             {Math.round(((totalRegular - subtotal) / totalRegular) * 100)}% OFF
+                         </Text>
+                     </View>
                  )}
                  <Text style={styles.totalValue}>{formatCurrency(subtotal)}</Text>
               </View>
@@ -194,13 +205,13 @@ export default function CartScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: COLORS.cream,
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 60 : 50,
     paddingBottom: 20,
     paddingHorizontal: 20,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.cream,
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
@@ -224,20 +235,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.primary,
   },
-  clearBtn: {
-    marginLeft: 'auto',
-  },
-  clearText: {
-    color: COLORS.text.muted,
-    fontSize: 14,
-    fontWeight: '600',
+  headerIconBtn: {
+    padding: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   listContent: {
     padding: 20,
     paddingBottom: 320, // Increased padding
   },
   cartItem: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)', // Glass-like opacity
+    backgroundColor: 'rgba(255, 255, 255, 1)', // Glass-like opacity
     borderRadius: 16,
     padding: 12,
     marginBottom: 12,
@@ -496,5 +504,15 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  itemDiscountText: {
+    fontSize: 10,
+    color: COLORS.success,
+    fontWeight: 'bold',
+  },
+  totalDiscountText: {
+    fontSize: 12,
+    color: COLORS.success,
+    fontWeight: 'bold',
   },
 });
