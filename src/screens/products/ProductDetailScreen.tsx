@@ -736,7 +736,7 @@ export default function ProductDetailScreen() {
                 <Text style={styles.productName}>{product.name}</Text>
                 
                 <View style={styles.priceRow}>
-                  {isOnSale && (
+                  {isOnSale && parseFloat(currentRegularPrice) > parseFloat(currentPrice) && (
                     <>
                       <View style={styles.priceWithIcon}>
                         <IndianRupeeIcon size={14} color="#999" />
@@ -863,7 +863,7 @@ export default function ProductDetailScreen() {
                {Math.round(parseFloat(currentPrice) + (isStitched ? STITCHING_COST : 0))}
             </Text>
           </View>
-          {isOnSale && (
+          {isOnSale && parseFloat(currentRegularPrice) > parseFloat(currentPrice) && (
             <View style={styles.priceWithIcon}>
               <IndianRupeeIcon size={12} color="#999" />
               <Text style={styles.bottomOriginalPrice}>{Math.round(parseFloat(currentRegularPrice))}</Text>

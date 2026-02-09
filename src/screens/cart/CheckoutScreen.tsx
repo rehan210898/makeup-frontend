@@ -470,7 +470,7 @@ export default function CheckoutScreen() {
               {paymentMethod === 'card' && <View style={styles.radioInner} />}
             </View>
             <View style={styles.paymentTextContainer}>
-                <Text style={styles.paymentTitle}>Credit / Debit Card</Text>
+                <Text style={styles.paymentTitle}>Credit / Debit Card / UPI</Text>
                 <Text style={styles.paymentDesc}>Secure payment via Razorpay</Text>
             </View>
           </TouchableOpacity>

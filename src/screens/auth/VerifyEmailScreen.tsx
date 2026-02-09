@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, SafeAreaView, Platform } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../navigation/types';
 import { AuthService } from '../../services/AuthService';
 import { useUserStore } from '../../store/userStore';
 import { COLORS } from '../../constants';
+import { FONTS } from '../../constants/fonts';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import ArrowLeftIcon from '../../components/icons/ArrowLeftIcon';
+import { Feather } from '@expo/vector-icons';
 
 type VerifyScreenRouteProp = RouteProp<RootStackParamList, 'VerifyEmail'>;
 type VerifyScreenNavProp = NativeStackNavigationProp<RootStackParamList>;
@@ -88,44 +91,60 @@ export default function VerifyEmailScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Verify Your Email</Text>
-      
-      <Text style={styles.text}>
-        We sent a verification link to:
-      </Text>
-      <Text style={styles.emailText}>{email}</Text>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.backBtn}>
+          <ArrowLeftIcon size={24} color={COLORS.primary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Verify Email</Text>
+        <View style={{ width: 40 }} />
+      </View>
 
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Verifying...</Text>
-        </View>
-      ) : (
-        <View style={styles.actionContainer}>
-           <Text style={styles.infoText}>
-            Click the link in your email to continue.
+      <View style={styles.content}>
+        <View style={styles.card}>
+          <View style={styles.iconContainer}>
+            <Feather name="mail" size={48} color={COLORS.primary} />
+          </View>
+          
+          <Text style={styles.title}>Check your Inbox</Text>
+          
+          <Text style={styles.text}>
+            We sent a verification link to:
           </Text>
+          <Text style={styles.emailText}>{email}</Text>
 
-          <TouchableOpacity 
-            style={styles.resendButton} 
-            onPress={handleResend}
-            disabled={resending}
-          >
-            {resending ? (
-              <ActivityIndicator color={COLORS.primary} />
-            ) : (
-              <Text style={styles.resendText}>Resend Email</Text>
-            )}
-          </TouchableOpacity>
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={COLORS.primary} />
+              <Text style={styles.loadingText}>Verifying...</Text>
+            </View>
+          ) : (
+            <View style={styles.actionContainer}>
+              <Text style={styles.infoText}>
+                Click the link in your email to continue.
+              </Text>
 
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.navigate('Login')}
-          >
-            <Text style={styles.backText}>Back to Login</Text>
-          </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.resendButton} 
+                onPress={handleResend}
+                disabled={resending}
+              >
+                {resending ? (
+                  <ActivityIndicator color={COLORS.primary} />
+                ) : (
+                  <Text style={styles.resendText}>Resend Email</Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.backButton}
+                onPress={() => navigation.navigate('Login')}
+              >
+                <Text style={styles.backText}>Back to Login</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
-      )}
+      </View>
     </View>
   );
 }
@@ -133,26 +152,71 @@ export default function VerifyEmailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: COLORS.cream,
+  },
+  header: {
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
+    paddingBottom: 15,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: COLORS.cream,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontFamily: FONTS.serif.bold,
+    color: COLORS.text.main,
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  card: {
+    backgroundColor: COLORS.white,
+    padding: 30,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
+    alignItems: 'center',
+  },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: COLORS.backgroundSubtle,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   title: {
-    fontSize: 26,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontFamily: FONTS.serif.bold,
     color: COLORS.primary,
-    marginBottom: 20,
+    marginBottom: 10,
   },
   text: {
     fontSize: 16,
-    color: '#666',
+    color: COLORS.text.secondary,
     marginBottom: 5,
+    fontFamily: FONTS.display.regular,
   },
   emailText: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontFamily: FONTS.display.bold,
+    color: COLORS.text.main,
     marginBottom: 30,
   },
   loadingContainer: {
@@ -162,6 +226,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     color: COLORS.primary,
+    fontFamily: FONTS.display.medium,
   },
   actionContainer: {
     width: '100%',
@@ -169,26 +234,32 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 14,
-    color: '#888',
-    marginBottom: 20,
+    color: COLORS.text.muted,
+    marginBottom: 24,
+    fontFamily: FONTS.display.regular,
+    textAlign: 'center',
   },
   resendButton: {
-    padding: 15,
-    borderRadius: 8,
-    borderWidth: 1,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: COLORS.primary,
-    width: '80%',
+    width: '100%',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 16,
   },
   resendText: {
     color: COLORS.primary,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontFamily: FONTS.display.bold,
   },
   backButton: {
-    padding: 15,
+    padding: 10,
   },
   backText: {
-    color: '#666',
+    color: COLORS.text.secondary,
+    fontFamily: FONTS.display.medium,
+    fontSize: 14,
   }
 });

@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, ScrollView, TextInput, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { COLORS, API_CONFIG } from '../../constants';
+import { FONTS } from '../../constants/fonts';
 import { RootStackParamList } from '../../navigation/types';
 import { AuthService } from '../../services/AuthService';
 import { useUserStore } from '../../store/userStore';
 import { User } from '../../types';
-import { GlassCard, GlassButton, GlassInput } from '../../components/ui';
-import { FloatingIconsBackground } from '../../components/home/FloatingIconsBackground';
+import PasswordInput from '../../components/common/PasswordInput';
+import { Feather } from '@expo/vector-icons';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -25,7 +25,6 @@ export default function LoginScreen() {
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const [loginInput, setLoginInput] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const { setUser, isAuthenticated } = useUserStore();
@@ -107,8 +106,6 @@ export default function LoginScreen() {
   };
 
   const handleGoogleLogin = useCallback(async () => {
-    // Prefer server-side OAuth flow (works in all environments including dev-client builds)
-    // The expo-auth-session flow requires valid client IDs per platform
     const hasClientIds = GOOGLE_CLIENT_ID_WEB || GOOGLE_CLIENT_ID_ANDROID || GOOGLE_CLIENT_ID_IOS;
 
     if (!hasClientIds || !request) {
@@ -175,7 +172,6 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <FloatingIconsBackground />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -185,84 +181,83 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Animated.View
-            entering={FadeInDown.duration(600).delay(100)}
-            style={styles.headerContainer}
-          >
+          <View style={styles.headerContainer}>
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>Sign in to continue shopping</Text>
-          </Animated.View>
+          </View>
 
-          <Animated.View entering={FadeInUp.duration(600).delay(200)}>
-            <GlassCard variant="gradient" padding={24} style={styles.formCard}>
-              <GlassInput
-                label="Email or Username"
+          <View style={styles.card}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email or Username</Text>
+              <TextInput
+                style={styles.input}
                 placeholder="Enter your email or username"
+                placeholderTextColor={COLORS.text.muted}
                 value={loginInput}
                 onChangeText={setLoginInput}
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="email-address"
-                variant="filled"
               />
+            </View>
 
-              <GlassInput
-                label="Password"
-                placeholder="Enter your password"
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Password</Text>
+              <PasswordInput
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                variant="filled"
-                rightIcon={
-                  <Text style={styles.showHide}>{showPassword ? 'Hide' : 'Show'}</Text>
-                }
-                onRightIconPress={() => setShowPassword(!showPassword)}
+                placeholder="Enter your password"
+                style={{marginBottom: 0}}
               />
+            </View>
 
-              <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotButton}>
-                <Text style={styles.forgotPassword}>Forgot Password?</Text>
-              </TouchableOpacity>
-
-              <GlassButton
-                title="Sign In"
-                onPress={handleLogin}
-                loading={loading}
-                disabled={loading}
-                variant="primary"
-                size="large"
-                fullWidth
-                style={styles.loginButton}
-              />
-
-              <View style={styles.divider}>
-                <View style={styles.line} />
-                <Text style={styles.orText}>OR</Text>
-                <View style={styles.line} />
-              </View>
-
-              <GlassButton
-                title="Continue with Google"
-                onPress={handleGoogleLogin}
-                loading={googleLoading}
-                disabled={googleLoading}
-                variant="outline"
-                size="large"
-                fullWidth
-              />
-            </GlassCard>
-          </Animated.View>
-
-          <Animated.View entering={FadeInUp.duration(600).delay(400)}>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Register')}
-              style={styles.registerButton}
-            >
-              <Text style={styles.registerText}>
-                Don't have an account?{' '}
-                <Text style={styles.registerLink}>Create one</Text>
-              </Text>
+            <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotButton}>
+              <Text style={styles.forgotPassword}>Forgot Password?</Text>
             </TouchableOpacity>
-          </Animated.View>
+
+            <TouchableOpacity 
+              style={styles.button}
+              onPress={handleLogin}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Sign In</Text>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.divider}>
+              <View style={styles.line} />
+              <Text style={styles.orText}>OR</Text>
+              <View style={styles.line} />
+            </View>
+
+            <TouchableOpacity 
+              style={styles.googleButton}
+              onPress={handleGoogleLogin}
+              disabled={googleLoading}
+            >
+              {googleLoading ? (
+                <ActivityIndicator color={COLORS.text.main} />
+              ) : (
+                <View style={styles.googleContent}>
+                  {/* Google Icon can be added here if available */}
+                  <Text style={styles.googleButtonText}>Continue with Google</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Register')}
+            style={styles.registerButton}
+          >
+            <Text style={styles.registerText}>
+              Don't have an account?{' '}
+              <Text style={styles.registerLink}>Create one</Text>
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -287,34 +282,74 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontFamily: FONTS.serif.bold,
     color: COLORS.primary,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: COLORS.gray[500],
+    color: COLORS.text.secondary,
+    fontFamily: FONTS.display.regular,
   },
-  formCard: {
+  card: {
+    backgroundColor: COLORS.white,
+    padding: 24,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
     marginBottom: 24,
   },
-  showHide: {
-    color: COLORS.primary,
-    fontWeight: '600',
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
     fontSize: 14,
+    color: COLORS.text.secondary,
+    marginBottom: 8,
+    fontFamily: FONTS.display.medium,
+  },
+  input: {
+    backgroundColor: '#F9F9F9',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
+    fontSize: 16,
+    fontFamily: FONTS.display.regular,
+    color: COLORS.text.main,
   },
   forgotButton: {
     alignSelf: 'flex-end',
-    marginBottom: 20,
+    marginBottom: 24,
     marginTop: -8,
   },
   forgotPassword: {
-    color: COLORS.gray[600],
+    color: COLORS.text.secondary,
     fontSize: 14,
+    fontFamily: FONTS.display.medium,
   },
-  loginButton: {
-    marginTop: 8,
+  button: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: FONTS.display.bold,
   },
   divider: {
     flexDirection: 'row',
@@ -324,23 +359,41 @@ const styles = StyleSheet.create({
   line: {
     flex: 1,
     height: 1,
-    backgroundColor: COLORS.gray[300],
+    backgroundColor: '#EEEEEE',
   },
   orText: {
     marginHorizontal: 16,
-    color: COLORS.gray[500],
+    color: COLORS.text.muted,
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: FONTS.display.medium,
+  },
+  googleButton: {
+    backgroundColor: COLORS.white,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+  },
+  googleContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  googleButtonText: {
+    color: COLORS.text.main,
+    fontSize: 16,
+    fontFamily: FONTS.display.bold,
   },
   registerButton: {
     alignItems: 'center',
   },
   registerText: {
     fontSize: 15,
-    color: COLORS.gray[600],
+    color: COLORS.text.secondary,
+    fontFamily: FONTS.display.regular,
   },
   registerLink: {
     color: COLORS.primary,
-    fontWeight: '600',
+    fontFamily: FONTS.display.bold,
   },
 });

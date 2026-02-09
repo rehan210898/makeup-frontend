@@ -2,15 +2,18 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, FlatList } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { COLORS } from '../../constants';
+import { FONTS } from '../../constants/fonts';
 import { useUserStore } from '../../store/userStore';
 import { API_CONFIG } from '../../constants';
 import axios from 'axios';
 import { AddressAutofill } from '../../components/common/AddressAutofill';
 import { SavedAddress } from '../../types';
+import ArrowLeftIcon from '../../components/icons/ArrowLeftIcon';
+import { Feather } from '@expo/vector-icons';
 
 export default function AddressScreen() {
   const navigation = useNavigation();
-  const { user, token, updateUser, addAddress, removeAddress } = useUserStore();
+  const { user, updateUser, addAddress, removeAddress } = useUserStore();
   const [loading, setLoading] = useState(false);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -116,34 +119,53 @@ export default function AddressScreen() {
   const renderAddressItem = ({ item }: { item: SavedAddress }) => (
       <View style={styles.addressCard}>
           <View style={styles.cardHeader}>
-              <Text style={styles.cardLabel}>{item.label} {item.isDefault && <Text style={styles.defaultBadge}>(Default)</Text>}</Text>
+              <View style={styles.labelContainer}>
+                <Text style={styles.cardLabel}>{item.label}</Text>
+                {item.isDefault && (
+                    <View style={styles.defaultBadgeContainer}>
+                        <Text style={styles.defaultBadgeText}>Default</Text>
+                    </View>
+                )}
+              </View>
               <View style={styles.cardActions}>
-                  <TouchableOpacity onPress={() => handleEdit(item)}><Text style={styles.editText}>Edit</Text></TouchableOpacity>
-                  <TouchableOpacity onPress={() => handleDelete(item.id)}><Text style={styles.deleteText}>Delete</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleEdit(item)} style={styles.actionBtn}>
+                    <Feather name="edit-2" size={18} color={COLORS.info} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.actionBtn}>
+                    <Feather name="trash-2" size={18} color={COLORS.error} />
+                  </TouchableOpacity>
               </View>
           </View>
-          <Text style={styles.cardText}>{item.first_name} {item.last_name}</Text>
-          <Text style={styles.cardText}>{item.address_1}</Text>
-          <Text style={styles.cardText}>{item.city}, {item.state} {item.postcode}</Text>
-          <Text style={styles.cardText}>{item.country}</Text>
-          <Text style={styles.cardText}>{item.phone}</Text>
+          
+          <View style={styles.cardBody}>
+            <Text style={styles.nameText}>{item.first_name} {item.last_name}</Text>
+            <Text style={styles.addressText}>{item.address_1}</Text>
+            <Text style={styles.addressText}>{item.city}, {item.state} {item.postcode}</Text>
+            <Text style={styles.addressText}>{item.country}</Text>
+            <View style={styles.phoneRow}>
+                <Feather name="phone" size={14} color={COLORS.text.muted} />
+                <Text style={styles.phoneText}>{item.phone}</Text>
+            </View>
+          </View>
       </View>
   );
 
   if (isFormVisible) {
       return (
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
-            <View style={[styles.header, { backgroundColor: COLORS.primary }]}>
+            <View style={styles.header}>
                 <TouchableOpacity onPress={() => setIsFormVisible(false)} style={styles.backBtn}>
-                    <Text style={styles.backBtnText}>Cancel</Text>
+                    <Text style={styles.cancelBtnText}>Cancel</Text>
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{editingId ? 'Edit Address' : 'New Address'}</Text>
                 <View style={{ width: 60 }} />
             </View>
-            <ScrollView style={styles.content}>
-                <View style={styles.formSection}>
-                    <Text style={styles.label}>Label (e.g. Home, Office)</Text>
-                    <TextInput style={styles.input} value={form.label} onChangeText={(text) => setForm({...form, label: text})} />
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                <View style={styles.card}>
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Label (e.g. Home, Office)</Text>
+                        <TextInput style={styles.input} value={form.label} onChangeText={(text) => setForm({...form, label: text})} placeholder="Home" />
+                    </View>
 
                     <Text style={styles.label}>Full Name</Text>
                     <View style={styles.row}>
@@ -151,18 +173,20 @@ export default function AddressScreen() {
                         <TextInput style={[styles.input, styles.halfInput]} value={form.last_name} placeholder="Last Name" onChangeText={(text) => setForm({...form, last_name: text})} />
                     </View>
 
-                    <Text style={styles.label}>Search Address</Text>
-                    <AddressAutofill 
-                        value={form.address_1}
-                        onChangeText={(text) => setForm({...form, address_1: text})}
-                        onSelect={(details) => setForm({
-                            ...form, 
-                            address_1: details.address_1,
-                            city: details.city,
-                            state: details.state,
-                            country: details.country || 'IN'
-                        })}
-                    />
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Search Address</Text>
+                        <AddressAutofill 
+                            value={form.address_1}
+                            onChangeText={(text) => setForm({...form, address_1: text})}
+                            onSelect={(details) => setForm({
+                                ...form, 
+                                address_1: details.address_1,
+                                city: details.city,
+                                state: details.state,
+                                country: details.country || 'IN'
+                            })}
+                        />
+                    </View>
 
                     <View style={styles.row}>
                         <View style={styles.halfInput}>
@@ -186,32 +210,35 @@ export default function AddressScreen() {
                         </View>
                     </View>
 
-                    <Text style={styles.label}>Phone</Text>
-                    <TextInput style={styles.input} value={form.phone} onChangeText={(text) => setForm({...form, phone: text})} keyboardType="phone-pad" />
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Phone</Text>
+                        <TextInput style={styles.input} value={form.phone} onChangeText={(text) => setForm({...form, phone: text})} keyboardType="phone-pad" />
+                    </View>
 
                     <TouchableOpacity 
                         style={styles.checkboxContainer} 
                         onPress={() => setForm({...form, isDefault: !form.isDefault})}
                     >
-                        <View style={[styles.checkbox, form.isDefault && styles.checkboxChecked]} />
+                        <View style={[styles.checkbox, form.isDefault && styles.checkboxChecked]}>
+                            {form.isDefault && <Feather name="check" size={14} color="#FFF" />}
+                        </View>
                         <Text style={styles.checkboxLabel}>Set as default address</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={loading}>
+                        {loading ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.saveBtnText}>Save Address</Text>}
                     </TouchableOpacity>
                 </View>
             </ScrollView>
-            <View style={styles.footer}>
-                <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={loading}>
-                    {loading ? <ActivityIndicator color={COLORS.cream} /> : <Text style={styles.saveBtnText}>Save Address</Text>}
-                </TouchableOpacity>
-            </View>
         </KeyboardAvoidingView>
       );
   }
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { backgroundColor: COLORS.primary }]}>
+      <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backBtnText}>← Back</Text>
+          <ArrowLeftIcon size={24} color={COLORS.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Addresses</Text>
         <TouchableOpacity onPress={handleAddNew} style={styles.addBtn}>
@@ -224,8 +251,10 @@ export default function AddressScreen() {
           keyExtractor={(item) => item.id}
           renderItem={renderAddressItem}
           contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
               <View style={styles.emptyContainer}>
+                  <Feather name="map-pin" size={48} color={COLORS.text.muted} style={{ marginBottom: 16 }} />
                   <Text style={styles.emptyText}>No saved addresses.</Text>
                   <Text style={styles.emptySubText}>Add an address for faster checkout.</Text>
               </View>
@@ -237,35 +266,102 @@ export default function AddressScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.cream },
-  header: { paddingTop: 50, paddingBottom: 15, paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  backBtn: { width: 60 },
-  backBtnText: { color: COLORS.cream, fontSize: 16 },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.cream },
-  addBtn: { width: 60, alignItems: 'flex-end' },
-  addBtnText: { color: COLORS.cream, fontSize: 16, fontWeight: 'bold' },
-  content: { flex: 1, padding: 20 },
+  header: { 
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
+    paddingBottom: 15,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: COLORS.cream,
+  },
+  backBtn: { width: 60, height: 40, justifyContent: 'center' },
+  cancelBtnText: { color: COLORS.text.secondary, fontSize: 16, fontFamily: FONTS.display.medium },
+  headerTitle: { fontSize: 18, fontFamily: FONTS.serif.bold, color: COLORS.text.main },
+  addBtn: { width: 60, alignItems: 'flex-end', height: 40, justifyContent: 'center' },
+  addBtnText: { color: COLORS.primary, fontSize: 16, fontFamily: FONTS.display.bold },
+  
+  scrollContent: { padding: 20 },
   listContent: { padding: 20 },
-  formSection: { backgroundColor: COLORS.white, padding: 20, borderRadius: 12, marginBottom: 20 },
-  label: { fontSize: 14, color: '#666', marginBottom: 5, fontWeight: '500' },
-  input: { backgroundColor: '#f9f9f9', borderWidth: 1, borderColor: '#eee', borderRadius: 8, padding: 12, marginBottom: 15, fontSize: 15, color: '#333' },
+  
+  card: {
+    backgroundColor: COLORS.white,
+    padding: 24,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
+  },
+  
+  inputGroup: { marginBottom: 16 },
+  label: { fontSize: 14, color: COLORS.text.secondary, marginBottom: 8, fontFamily: FONTS.display.medium },
+  input: { 
+    backgroundColor: '#F9F9F9',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
+    fontSize: 16,
+    fontFamily: FONTS.display.regular,
+    color: COLORS.text.main,
+    marginBottom: 16
+  },
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: 15 },
   halfInput: { flex: 1 },
-  footer: { padding: 20, backgroundColor: COLORS.white, borderTopWidth: 1, borderTopColor: '#eee' },
-  saveBtn: { padding: 16, borderRadius: 10, alignItems: 'center', backgroundColor: COLORS.primary },
-  saveBtnText: { color: COLORS.cream, fontSize: 16, fontWeight: 'bold' },
-  addressCard: { backgroundColor: '#fff', padding: 15, borderRadius: 10, marginBottom: 15, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-  cardLabel: { fontSize: 16, fontWeight: 'bold', color: COLORS.primary },
-  cardActions: { flexDirection: 'row', gap: 15 },
-  editText: { color: COLORS.info, fontWeight: '600' },
-  deleteText: { color: COLORS.error, fontWeight: '600' },
-  cardText: { fontSize: 14, color: '#555', marginBottom: 2 },
-  defaultBadge: { color: COLORS.success, fontSize: 12, fontWeight: 'normal' },
-  emptyContainer: { alignItems: 'center', marginTop: 50 },
-  emptyText: { fontSize: 18, fontWeight: 'bold', color: COLORS.gray[500] },
-  emptySubText: { fontSize: 14, color: COLORS.gray[400], marginTop: 5 },
-  checkboxContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 10, marginBottom: 10 },
-  checkbox: { width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: COLORS.primary, marginRight: 10 },
+  
+  saveBtn: { 
+    backgroundColor: COLORS.primary,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 10,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  saveBtnText: { color: COLORS.white, fontSize: 16, fontFamily: FONTS.display.bold },
+
+  addressCard: { 
+    backgroundColor: COLORS.white,
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
+  },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, alignItems: 'center' },
+  labelContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cardLabel: { fontSize: 16, fontFamily: FONTS.display.bold, color: COLORS.text.main },
+  defaultBadgeContainer: { backgroundColor: COLORS.success + '15', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  defaultBadgeText: { color: COLORS.success, fontSize: 10, fontFamily: FONTS.display.bold },
+  
+  cardActions: { flexDirection: 'row', gap: 12 },
+  actionBtn: { padding: 4 },
+  
+  cardBody: { gap: 4 },
+  nameText: { fontSize: 16, fontFamily: FONTS.display.medium, color: COLORS.text.main, marginBottom: 2 },
+  addressText: { fontSize: 14, color: COLORS.text.secondary, fontFamily: FONTS.display.regular, lineHeight: 20 },
+  phoneRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  phoneText: { fontSize: 14, color: COLORS.text.muted, fontFamily: FONTS.display.medium },
+
+  emptyContainer: { alignItems: 'center', marginTop: 60 },
+  emptyText: { fontSize: 18, fontFamily: FONTS.display.bold, color: COLORS.text.muted },
+  emptySubText: { fontSize: 14, color: COLORS.text.secondary, marginTop: 8, fontFamily: FONTS.display.regular },
+
+  checkboxContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 16 },
+  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: COLORS.primary, marginRight: 12, justifyContent: 'center', alignItems: 'center' },
   checkboxChecked: { backgroundColor: COLORS.primary },
-  checkboxLabel: { fontSize: 14, color: '#333' },
+  checkboxLabel: { fontSize: 15, color: COLORS.text.main, fontFamily: FONTS.display.medium },
 });

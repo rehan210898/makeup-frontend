@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { COLORS } from '../../constants';
+import { FONTS } from '../../constants/fonts';
 import { useUserStore } from '../../store/userStore';
 import { orderService } from '../../services/orderService';
 import { Order } from '../../types';
+import ArrowLeftIcon from '../../components/icons/ArrowLeftIcon';
 
 export default function OrderHistoryScreen() {
   const navigation = useNavigation();
@@ -112,12 +114,12 @@ export default function OrderHistoryScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { backgroundColor: COLORS.primary }]}>
+      <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backBtnText}>← Back</Text>
+          <ArrowLeftIcon size={24} color={COLORS.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Orders</Text>
-        <View style={{ width: 60 }} />
+        <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.tabContainer}>
@@ -169,24 +171,24 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.cream,
   },
   header: {
-    paddingTop: 50,
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
     paddingBottom: 15,
     paddingHorizontal: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: COLORS.cream,
   },
   backBtn: {
-    width: 60,
-  },
-  backBtnText: {
-    color: COLORS.cream,
-    fontSize: 16,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.cream,
+    fontFamily: FONTS.serif.bold,
+    color: COLORS.text.main,
   },
   tabContainer: {
     flexDirection: 'row',
@@ -208,6 +210,7 @@ const styles = StyleSheet.create({
   tabText: {
     color: '#666',
     fontWeight: '600',
+    fontFamily: FONTS.display.medium,
   },
   activeTabText: {
     color: COLORS.white,
@@ -245,6 +248,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: COLORS.primary,
+    fontFamily: FONTS.display.bold,
   },
   statusBadge: {
     paddingHorizontal: 8,
@@ -254,11 +258,13 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: 'bold',
+    fontFamily: FONTS.display.bold,
   },
   date: {
     fontSize: 14,
     color: '#666',
     marginBottom: 12,
+    fontFamily: FONTS.display.regular,
   },
   divider: {
     height: 1,
@@ -272,6 +278,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#444',
     marginBottom: 4,
+    fontFamily: FONTS.display.regular,
   },
   footer: {
     flexDirection: 'row',
@@ -284,14 +291,17 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontSize: 14,
     color: '#666',
+    fontFamily: FONTS.display.medium,
   },
   totalAmount: {
     fontSize: 16,
     fontWeight: 'bold',
     color: COLORS.primary,
+    fontFamily: FONTS.display.bold,
   },
   emptyText: {
     fontSize: 16,
     color: '#666',
+    fontFamily: FONTS.display.medium,
   },
 });
