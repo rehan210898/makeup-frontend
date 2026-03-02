@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 
 // API Configuration
-const PROD_URL = 'https://woocommerce-bff-muo.onrender.com/api/v1';
+const PROD_URL = 'https://app.makeupocean.com/api/v1';
 // Ensure this IP matches your computer's IP address (ipconfig/ifconfig)
 const DEV_URL = 'http://192.168.2.105:3000/api/v1';
 
