@@ -142,6 +142,7 @@ export default function BottomTabNavigator() {
           fontSize: 11,
           marginTop: 2,
         },
+        animation: 'fade',
       }}
     >
       <Tab.Screen

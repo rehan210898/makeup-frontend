@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, Platform, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, TextInput } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { COLORS } from '../../constants';
@@ -11,6 +11,7 @@ import { useCartStore } from '../../store/cartStore';
 import CartIcon from '../../components/icons/CartIcon';
 import SearchIcon from '../../components/icons/SearchIcon';
 import { FONTS } from '../../constants/fonts';
+import { CategoriesSkeleton } from '../../components/skeletons/CategoriesSkeleton';
 
 type CategoriesScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -92,10 +93,7 @@ export default function CategoriesScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         {loading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={styles.loadingText}>Loading categories...</Text>
-          </View>
+          <CategoriesSkeleton />
         )}
 
         {error && (
@@ -229,12 +227,6 @@ const styles = StyleSheet.create({
   loadingContainer: {
     alignItems: 'center',
     paddingTop: 60,
-  },
-  loadingText: {
-    marginTop: 10,
-    color: COLORS.primary,
-    fontSize: 14,
-    fontFamily: FONTS.display.medium,
   },
   errorBox: {
     backgroundColor: '#FEE2E2',

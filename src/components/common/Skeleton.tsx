@@ -1,16 +1,16 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, Dimensions, StyleProp, ViewStyle } from 'react-native';
+import { View, StyleSheet, StyleProp, ViewStyle, Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
   withTiming,
-  withSequence,
-  Easing,
-  interpolateColor,
+  interpolate,
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import { COLORS } from '../../constants';
 
-const { width } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface SkeletonProps {
   width?: number | string;
@@ -19,50 +19,77 @@ interface SkeletonProps {
   borderRadius?: number;
 }
 
-export const Skeleton: React.FC<SkeletonProps> = ({ 
-  width = '100%', 
-  height = 20, 
-  style, 
-  borderRadius = 4 
+export const Skeleton: React.FC<SkeletonProps> = ({
+  width = '100%',
+  height = 20,
+  style,
+  borderRadius = 8,
 }) => {
-  const opacity = useSharedValue(0.3);
+  const shimmerPosition = useSharedValue(0);
 
   useEffect(() => {
-    opacity.value = withRepeat(
-      withSequence(
-        withTiming(0.7, { duration: 800, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0.3, { duration: 800, easing: Easing.inOut(Easing.ease) })
-      ),
+    shimmerPosition.value = withRepeat(
+      withTiming(1, { duration: 1200 }),
       -1,
-      true
+      false
     );
-  }, []);
+  }, [shimmerPosition]);
 
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: opacity.value,
-    };
-  });
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateX: interpolate(
+          shimmerPosition.value,
+          [0, 1],
+          [-SCREEN_WIDTH, SCREEN_WIDTH]
+        ),
+      },
+    ],
+  }));
 
   return (
-    <Animated.View
+    <View
       style={[
-        styles.skeleton,
-        { 
-            width: width as any, 
-            height: height as any,
-            borderRadius: borderRadius
+        styles.container,
+        {
+          width: width as any,
+          height: height as any,
+          borderRadius,
         },
-        animatedStyle,
         style,
       ]}
-    />
+    >
+      <Animated.View style={[styles.shimmer, animatedStyle]}>
+        <LinearGradient
+          colors={[
+            'transparent',
+            'rgba(255,255,255,0.4)',
+            'transparent',
+          ]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.gradient}
+        />
+      </Animated.View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  skeleton: {
-    backgroundColor: '#E0E0E0',
+  container: {
+    backgroundColor: COLORS.gray[200],
     overflow: 'hidden',
   },
+  shimmer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    height: '100%',
+    width: SCREEN_WIDTH,
+  },
+  gradient: {
+    flex: 1,
+  },
 });
+
+export default Skeleton;

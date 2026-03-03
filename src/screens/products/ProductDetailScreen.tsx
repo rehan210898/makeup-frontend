@@ -31,6 +31,8 @@ import ArrowLeftIcon from '../../components/icons/ArrowLeftIcon';
 import CartIcon from '../../components/icons/CartIcon';
 import HeartIcon from '../../components/icons/HeartIcon';
 import SearchIcon from '../../components/icons/SearchIcon';
+import AddToBagIcon from '../../components/icons/AddToBagIcon';
+import { ProductDetailSkeleton } from '../../components/skeletons/ProductDetailSkeleton';
 
 type ProductDetailRouteProp = RouteProp<RootStackParamList, 'ProductDetail'>;
 type ProductDetailNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ProductDetail'>;
@@ -604,12 +606,7 @@ export default function ProductDetailScreen() {
   );
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading product...</Text>
-      </View>
-    );
+    return <ProductDetailSkeleton />;
   }
 
   if (!product) {
@@ -691,10 +688,10 @@ export default function ProductDetailScreen() {
         showsVerticalScrollIndicator={false}
         onEndReached={loadMoreProducts}
         onEndReachedThreshold={0.1}
-        maxToRenderPerBatch={10}
-        windowSize={10}
+        maxToRenderPerBatch={4}
+        windowSize={5}
         // removeClippedSubviews={true}
-        initialNumToRender={10}
+        initialNumToRender={4}
         getItemLayout={getItemLayout}
         ListHeaderComponent={
           <>
@@ -900,9 +897,15 @@ export default function ProductDetailScreen() {
             }}
             disabled={!isInStock}
           >
-            <Text style={[styles.addToCartText, (!isInStock) && styles.disabledText]}>
-              {!isInStock ? 'Out of Stock' : cartQuantity > 0 ? 'Go to Cart' : 'Add to Cart'}
-            </Text>
+            {!isInStock ? (
+              <Text style={[styles.addToCartText, styles.disabledText]}>
+                Out of Stock
+              </Text>
+            ) : cartQuantity > 0 ? (
+              <CartIcon size={24} color={COLORS.white} />
+            ) : (
+              <AddToBagIcon size={24} color={COLORS.white} />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -1509,7 +1512,7 @@ const styles = StyleSheet.create({
   actionButtons: {
     flexDirection: 'row',
     gap: 12,
-    flex: 2, 
+    flex: 1.5, 
     justifyContent: 'flex-end',
   },
   buyNowBtn: {
@@ -1520,7 +1523,7 @@ const styles = StyleSheet.create({
     borderRadius: 12, // More rounded
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
+    flex: 0.8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
@@ -1535,11 +1538,11 @@ const styles = StyleSheet.create({
   addToCartBtn: {
     backgroundColor: COLORS.primary,
     paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
+    minWidth: 54, // Ensures it looks like a nice square when it's just the icon
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,

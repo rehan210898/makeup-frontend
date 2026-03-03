@@ -1,34 +1,49 @@
 import React from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Skeleton } from '../common/Skeleton';
 import { COLORS } from '../../constants';
 
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width / 2) - 20; // Matches Home screen cards
-const LIST_CARD_WIDTH = (width / 2) - 15; // Matches ProductList cards (roughly)
-
 interface ProductCardSkeletonProps {
-  variant?: 'home' | 'list';
+  variant?: 'default' | 'compact';
 }
 
-export const ProductCardSkeleton: React.FC<ProductCardSkeletonProps> = ({ variant = 'home' }) => {
-  const cardWidth = variant === 'home' ? CARD_WIDTH : LIST_CARD_WIDTH;
-  
+export const ProductCardSkeleton: React.FC<ProductCardSkeletonProps> = ({ variant = 'default' }) => {
+  const isCompact = variant === 'compact';
+
   return (
-    <View style={[styles.container, { width: cardWidth }]}>
-      {/* Image Skeleton */}
-      <Skeleton height={cardWidth} borderRadius={12} style={styles.image} />
-      
-      {/* Content Skeleton */}
-      <View style={styles.details}>
-        {/* Title */}
-        <Skeleton height={14} width="90%" style={{ marginBottom: 6 }} />
-        <Skeleton height={14} width="60%" style={{ marginBottom: 10 }} />
-        
-        {/* Price Row */}
+    <View style={styles.container}>
+      {/* Image - matches ProductCard's aspectRatio: 1 with 12px padding */}
+      <View style={styles.imageContainer}>
+        <Skeleton width="100%" height="100%" borderRadius={8} />
+      </View>
+
+      {/* Details - matches ProductCard details section */}
+      <View style={[styles.details, isCompact && styles.compactDetails]}>
+        {/* Name - 2 lines */}
+        <Skeleton
+          width="90%"
+          height={isCompact ? 11 : 13}
+          borderRadius={4}
+          style={{ marginBottom: 4 }}
+        />
+        <Skeleton
+          width="60%"
+          height={isCompact ? 11 : 13}
+          borderRadius={4}
+          style={{ marginBottom: isCompact ? 6 : 8 }}
+        />
+
+        {/* Price */}
+        <Skeleton
+          width="40%"
+          height={isCompact ? 13 : 16}
+          borderRadius={4}
+          style={{ marginBottom: 4 }}
+        />
+        {/* Original price + discount */}
         <View style={styles.priceRow}>
-          <Skeleton height={18} width="40%" />
-          <Skeleton height={18} width="30%" />
+          <Skeleton width="25%" height={12} borderRadius={4} />
+          <Skeleton width="20%" height={12} borderRadius={4} style={{ marginLeft: 6 }} />
         </View>
       </View>
     </View>
@@ -37,23 +52,29 @@ export const ProductCardSkeleton: React.FC<ProductCardSkeletonProps> = ({ varian
 
 const styles = StyleSheet.create({
   container: {
+    width: '100%',
     backgroundColor: COLORS.white,
     borderRadius: 12,
-    marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+    borderColor: 'rgba(102, 31, 29, 0.08)',
     overflow: 'hidden',
   },
-  image: {
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
+  imageContainer: {
+    width: '100%',
+    aspectRatio: 1,
+    backgroundColor: COLORS.gray[50],
+    padding: 12,
   },
   details: {
     padding: 10,
+    paddingTop: 8,
+  },
+  compactDetails: {
+    padding: 8,
+    paddingTop: 6,
   },
   priceRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
   },
 });

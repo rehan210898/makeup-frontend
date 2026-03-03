@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { COLORS } from '../../constants';
 import { FONTS } from '../../constants/fonts';
@@ -7,6 +7,7 @@ import { useUserStore } from '../../store/userStore';
 import { orderService } from '../../services/orderService';
 import { Order } from '../../types';
 import ArrowLeftIcon from '../../components/icons/ArrowLeftIcon';
+import { OrderHistorySkeleton } from '../../components/skeletons/OrderHistorySkeleton';
 
 export default function OrderHistoryScreen() {
   const navigation = useNavigation();
@@ -138,9 +139,7 @@ export default function OrderHistoryScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-        </View>
+        <OrderHistorySkeleton />
       ) : (
         <FlatList
           data={filteredOrders}

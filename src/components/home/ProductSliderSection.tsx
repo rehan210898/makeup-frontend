@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useCallback, memo } from 'react';
+import React, { useCallback, memo, useMemo } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from '@react-navigation/native';
+import { useQuery } from '@tanstack/react-query';
 import { COLORS } from '../../constants';
 import { FONTS } from '../../constants/fonts';
 import productService from '../../services/productService';
@@ -27,136 +28,141 @@ interface ProductSliderSectionProps {
 const { width } = Dimensions.get('window');
 const GAP = 10;
 
-const ProductSliderSectionComponent: React.FC<ProductSliderSectionProps> = ({ title, dataSource, images, layout, cardStyle }) => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+// Build a stable query key from dataSource
+function buildQueryKey(dataSource?: ProductSliderSectionProps['dataSource'], images?: string[]) {
+  if (!dataSource) return ['products', 'slider', 'none'];
+  if (dataSource.type === 'ids') {
+    return ['products', 'slider', 'ids', dataSource.ids?.join(',') || ''];
+  }
+  return ['products', 'slider', 'filter', dataSource.key || '', String(dataSource.value || '')];
+}
+
+// Fetch function for the query
+async function fetchSliderProducts(
+  dataSource: ProductSliderSectionProps['dataSource'],
+  images?: string[]
+): Promise<Product[]> {
+  if (!dataSource) return [];
+
+  let response: any;
+
+  if (dataSource.type === 'ids' && dataSource.ids?.length) {
+    response = await productService.getProducts({
+      // @ts-ignore
+      include: dataSource.ids,
+    });
+
+    // Apply image overrides and sort by ID order
+    if (response?.data && images && images.length > 0) {
+      const ids = dataSource.ids;
+      const sorted = response.data.sort(
+        (a: any, b: any) => ids.indexOf(a.id) - ids.indexOf(b.id)
+      );
+      response.data = sorted.map((p: any) => {
+        const originalIndex = ids.indexOf(p.id);
+        if (originalIndex !== -1 && images[originalIndex]) {
+          return { ...p, images: [{ src: images[originalIndex] }] };
+        }
+        return p;
+      });
+    }
+  } else if (dataSource.type === 'filter') {
+    const filters: any = { per_page: 6 };
+
+    if (dataSource.key === 'popularity') filters.orderby = 'popularity';
+    else if (dataSource.key === 'date') filters.orderby = 'date';
+    else if (dataSource.key === 'rating') filters.orderby = 'rating';
+    else if (dataSource.key === 'featured') filters.featured = true;
+    else if (dataSource.key === 'on_sale') filters.on_sale = true;
+    else if (dataSource.key === 'category' && dataSource.value) {
+      if (typeof dataSource.value === 'string' && isNaN(Number(dataSource.value))) {
+        const catResponse = await categoryService.getCategoryBySlug(dataSource.value);
+        if (catResponse.data?.[0]) {
+          filters.category = catResponse.data[0].id;
+        } else {
+          return [];
+        }
+      } else {
+        filters.category = dataSource.value;
+      }
+    }
+
+    response = await productService.getProducts(filters);
+  }
+
+  return response?.data || [];
+}
+
+const ProductSliderSectionComponent: React.FC<ProductSliderSectionProps> = ({
+  title,
+  dataSource,
+  images,
+  layout,
+  cardStyle,
+}) => {
   const navigation = useNavigation<any>();
-  const { items: wishlistItems, addItem, removeItem } = useWishlistStore();
+  const { itemIds: wishlistItemIds, addItem, removeItem } = useWishlistStore();
 
-    const isCompactSlider = layout === 'slider_2_5';
+  const isCompactSlider = layout === 'slider_2_5';
+  const CARD_WIDTH = isCompactSlider ? width / 2.5 : width / 2 - 20;
 
-    const CARD_WIDTH = isCompactSlider ? (width / 2.5) : (width / 2) - 20;
+  // Use React Query for caching and deduplication
+  const queryKey = useMemo(() => buildQueryKey(dataSource, images), [dataSource, images]);
 
-  
+  const { data: products = [], isLoading } = useQuery({
+    queryKey,
+    queryFn: () => fetchSliderProducts(dataSource, images),
+    enabled: !!dataSource,
+    staleTime: 1000 * 60 * 10, // 10 minutes for home page sections
+  });
 
-    useEffect(() => {
-    loadProducts();
-  }, [dataSource, images]);
+  const handleProductPress = useCallback(
+    (id: number) => {
+      navigation.navigate('ProductDetail', { productId: id });
+    },
+    [navigation]
+  );
 
-  const loadProducts = async () => {
-    if (!dataSource) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      let response: any;
-      if (dataSource.type === 'ids' && dataSource.ids?.length) {
-        response = await productService.getProducts({ 
-          // @ts-ignore
-          include: dataSource.ids 
-        });
-
-        // Apply Image Overrides and Sort by ID order
-        if (response && response.data && images && images.length > 0) {
-            const ids = dataSource.ids;
-            
-            // 1. Sort to match ID order
-            const sorted = response.data.sort((a: any, b: any) => ids.indexOf(a.id) - ids.indexOf(b.id));
-            
-            // 2. Override images
-            response.data = sorted.map((p: any) => {
-                const originalIndex = ids.indexOf(p.id);
-                if (originalIndex !== -1 && images[originalIndex]) {
-                    return {
-                        ...p,
-                        images: [{ src: images[originalIndex] }] // Override main image
-                    };
-                }
-                return p;
-            });
-        }
-
-      } else if (dataSource.type === 'filter') {
-        const filters: any = { per_page: 6 }; // Fetch fewer for carousel
-        if (dataSource.key === 'popularity') {
-          filters.orderby = 'popularity';
-        } else if (dataSource.key === 'date') {
-          filters.orderby = 'date';
-        } else if (dataSource.key === 'rating') {
-          filters.orderby = 'rating';
-        } else if (dataSource.key === 'featured') {
-          filters.featured = true;
-        } else if (dataSource.key === 'on_sale') {
-          filters.on_sale = true;
-        } else if (dataSource.key === 'category' && dataSource.value) {
-           if (typeof dataSource.value === 'string' && isNaN(Number(dataSource.value))) {
-             try {
-               const catResponse = await categoryService.getCategoryBySlug(dataSource.value);
-               if (catResponse.data && catResponse.data.length > 0) {
-                 filters.category = catResponse.data[0].id;
-               } else {
-                 console.warn(`Category slug '${dataSource.value}' not found`);
-                 setLoading(false);
-                 return;
-               }
-             } catch (err) {
-               console.error('Error resolving category slug', err);
-               setLoading(false);
-               return;
-             }
-           } else {
-             filters.category = dataSource.value;
-           }
-        }
-        response = await productService.getProducts(filters);
+  const toggleWishlist = useCallback(
+    (id: number) => {
+      const isWishlisted = wishlistItemIds.includes(id);
+      if (isWishlisted) {
+        removeItem(id);
+      } else {
+        const product = products.find((p) => p.id === id);
+        if (product) addItem(product);
       }
-      
-      if (response && response.data) {
-        setProducts(response.data);
-      }
-    } catch (error) {
-      console.error('Error loading slider products:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [wishlistItemIds, products, addItem, removeItem]
+  );
 
-  const handleProductPress = useCallback((id: number) => {
-    navigation.navigate('ProductDetail', { productId: id });
-  }, [navigation]);
+  const renderSkeletonItem = useCallback(
+    () => (
+      <View style={{ width: CARD_WIDTH, marginRight: GAP }}>
+        <ProductCardSkeleton variant={isCompactSlider ? 'compact' : 'default'} />
+      </View>
+    ),
+    [CARD_WIDTH, isCompactSlider]
+  );
 
-  const toggleWishlist = useCallback((id: number) => {
-    const isWishlisted = wishlistItems.some(item => item.id === id);
-    if (isWishlisted) {
-      removeItem(id);
-    } else {
-      const product = products.find(p => p.id === id);
-      if (product) addItem(product);
-    }
-  }, [wishlistItems, products, addItem, removeItem]);
+  const renderProductItem = useCallback(
+    ({ item, index }: { item: Product; index: number }) => (
+      <View style={{ width: CARD_WIDTH, marginRight: GAP }}>
+        <ProductCard
+          item={item}
+          onPress={handleProductPress}
+          onWishlistPress={toggleWishlist}
+          isWishlisted={wishlistItemIds.includes(item.id)}
+          hidePrice={!!images && images.length > 0}
+          variant={(cardStyle as any) || (isCompactSlider ? 'compact' : 'default')}
+          index={index}
+        />
+      </View>
+    ),
+    [CARD_WIDTH, handleProductPress, images, toggleWishlist, wishlistItemIds, isCompactSlider, cardStyle]
+  );
 
-  const renderSkeletonItem = useCallback(() => (
-    <View style={{ width: CARD_WIDTH, marginRight: GAP }}>
-      <ProductCardSkeleton />
-    </View>
-  ), [CARD_WIDTH]);
-
-  const renderProductItem = useCallback(({ item, index }: { item: Product; index: number }) => (
-    <View style={{ width: CARD_WIDTH, marginRight: GAP }}>
-      <ProductCard
-        item={item}
-        onPress={handleProductPress}
-        onWishlistPress={toggleWishlist}
-        isWishlisted={wishlistItems.some(w => w.id === item.id)}
-        hidePrice={!!images && images.length > 0}
-        variant={(cardStyle as any) || (isCompactSlider ? 'compact' : 'default')}
-        index={index}
-      />
-    </View>
-  ), [CARD_WIDTH, handleProductPress, images, toggleWishlist, wishlistItems, isCompactSlider, cardStyle]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={styles.container}>
         {title ? (
@@ -206,16 +212,18 @@ const ProductSliderSectionComponent: React.FC<ProductSliderSectionProps> = ({ ti
   );
 };
 
-// Memoize to prevent unnecessary re-renders when parent updates
-export const ProductSliderSection = memo(ProductSliderSectionComponent, (prevProps, nextProps) => {
-  return (
-    prevProps.title === nextProps.title &&
-    prevProps.layout === nextProps.layout &&
-    prevProps.cardStyle === nextProps.cardStyle &&
-    JSON.stringify(prevProps.dataSource) === JSON.stringify(nextProps.dataSource) &&
-    JSON.stringify(prevProps.images) === JSON.stringify(nextProps.images)
-  );
-});
+export const ProductSliderSection = memo(
+  ProductSliderSectionComponent,
+  (prevProps, nextProps) => {
+    return (
+      prevProps.title === nextProps.title &&
+      prevProps.layout === nextProps.layout &&
+      prevProps.cardStyle === nextProps.cardStyle &&
+      JSON.stringify(prevProps.dataSource) === JSON.stringify(nextProps.dataSource) &&
+      JSON.stringify(prevProps.images) === JSON.stringify(nextProps.images)
+    );
+  }
+);
 
 const styles = StyleSheet.create({
   container: {
@@ -223,12 +231,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
-    paddingBottom: 10, // Add some bottom padding for shadows
-  },
-  loading: {
-    height: 200,
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingBottom: 10,
   },
   header: {
     paddingHorizontal: 20,

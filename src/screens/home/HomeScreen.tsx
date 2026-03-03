@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, RefreshControl, Dimensions } from 'react-native';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { View, Text, StyleSheet, RefreshControl, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -34,6 +34,7 @@ import { TrendingVideosSection } from '../../components/home/TrendingVideosSecti
 import { TopRatedSection } from '../../components/home/TopRatedSection';
 import { EditorsChoiceSection } from '../../components/home/EditorsChoiceSection';
 import { RewardProgramCard } from '../../components/home/RewardProgramCard';
+import { ScrollToTopButton } from '../../components/common/ScrollToTopButton';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -45,8 +46,19 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { itemCount } = useCartStore();
-  const { layout: cachedLayout, popularProducts: cachedProducts, setHomeData } = useHomeStore();
+  const { layout: cachedLayout, popularProducts: cachedProducts, setHomeData, isCacheValid } = useHomeStore();
   const { user } = useUserStore();
+  const listRef = useRef<FlashList<any>>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const y = event.nativeEvent.contentOffset.y;
+    setShowScrollTop(y > 600);
+  }, []);
+
+  const scrollToTop = useCallback(() => {
+    listRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, []);
 
   const loadLayout = async () => {
     try {
@@ -65,8 +77,8 @@ export default function HomeScreen() {
 
   useEffect(() => {
     const init = async () => {
-      // Load from cache immediately
-      if (cachedLayout.length > 0) {
+      // Step 23: Only use cache if valid (< 10 min old)
+      if (cachedLayout.length > 0 && isCacheValid()) {
         setLayout(cachedLayout);
         setLoading(false);
       }
@@ -307,11 +319,14 @@ export default function HomeScreen() {
         <HomeSkeleton />
       ) : (
         <FlashList
+          ref={listRef}
           data={flatListData}
           renderItem={renderItem}
           keyExtractor={(item) => item._key}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -320,10 +335,11 @@ export default function HomeScreen() {
               colors={[COLORS.primary]}
             />
           }
-          drawDistance={500}
-          estimatedItemSize={300}
+          drawDistance={400}
+          estimatedItemSize={350}
         />
       )}
+      <ScrollToTopButton visible={showScrollTop} onPress={scrollToTop} />
     </View>
   );
 }

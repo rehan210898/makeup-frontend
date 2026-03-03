@@ -11,10 +11,10 @@ interface CartStore {
   subtotal: number;
   coupons: Coupon[];
   serverTotals: Cart['totals'];
-  
+
   addItem: (
-    product: Product, 
-    quantity?: number, 
+    product: Product,
+    quantity?: number,
     variationId?: number,
     selectedAttributes?: { [key: string]: string },
     isStitched?: boolean
@@ -131,9 +131,8 @@ export const useCartStore = create<CartStore>()(
             items: newItems,
             subtotal: calculateSubtotal(newItems),
             itemCount: calculateItemCount(newItems),
-            // Reset server totals when local items change as they are stale
-            serverTotals: undefined, 
-            coupons: [] // Optionally clear coupons on cart change or keep them? WC usually keeps them but validates.
+            serverTotals: undefined,
+            coupons: []
           };
         });
 
@@ -165,7 +164,7 @@ export const useCartStore = create<CartStore>()(
             items: newItems,
             subtotal: calculateSubtotal(newItems),
             itemCount: calculateItemCount(newItems),
-            serverTotals: undefined // Invalidated
+            serverTotals: undefined
           };
         });
 
@@ -231,7 +230,7 @@ export const useCartStore = create<CartStore>()(
             items: newItems,
             subtotal: calculateSubtotal(newItems),
             itemCount: calculateItemCount(newItems),
-            serverTotals: undefined // Invalidated
+            serverTotals: undefined
           };
         });
 
@@ -268,6 +267,12 @@ export const useCartStore = create<CartStore>()(
     {
       name: STORAGE_KEYS.CART,
       storage: createJSONStorage(() => AsyncStorage),
+      // Step 22: Exclude computed values from persistence, recompute on rehydration
+      partialize: (state) => ({
+        items: state.items,
+        coupons: state.coupons,
+        serverTotals: state.serverTotals,
+      }),
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.itemCount = calculateItemCount(state.items);

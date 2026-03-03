@@ -33,12 +33,15 @@ import { COLORS } from './src/constants';
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
+// Step 11: Global default staleTime of 2 min; per-query overrides applied in individual hooks
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 2,
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 1000 * 60 * 2,      // 2 minutes default staleTime
+      gcTime: 1000 * 60 * 30,         // 30 minutes before unused cache is garbage collected
       refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
     },
   },
 });
@@ -77,11 +80,8 @@ export default function App() {
   }, [fontsLoaded, fontError]);
 
   if (!fontsLoaded && !fontError) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
+    // Keep native splash screen visible while fonts load
+    return null;
   }
 
   return (

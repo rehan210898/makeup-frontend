@@ -1,13 +1,15 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useQuery } from '@tanstack/react-query';
 import { COLORS } from '../../constants';
 import { FONTS } from '../../constants/fonts';
 import productService from '../../services/productService';
 import { Product } from '../../types';
 import ProductCard from '../products/ProductCard';
 import { useWishlistStore } from '../../store/wishlistStore';
-import { SectionSkeleton } from '../skeletons/SectionSkeleton';
+import { ProductCardSkeleton } from '../skeletons/ProductCardSkeleton';
+import { Skeleton } from '../common/Skeleton';
 
 interface EditorsChoiceSectionProps {
   title?: string;
@@ -18,55 +20,44 @@ export const EditorsChoiceSection: React.FC<EditorsChoiceSectionProps> = ({
   title = "Editor's Choice",
   productIds,
 }) => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
   const navigation = useNavigation<any>();
-  const { items: wishlistItems, addItem, removeItem } = useWishlistStore();
+  const { itemIds: wishlistItemIds, addItem, removeItem } = useWishlistStore();
 
-  useEffect(() => {
-    loadProducts();
-  }, [productIds]);
-
-  const loadProducts = async () => {
-    try {
-      setLoading(true);
-      let data: Product[];
-
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ['products', 'editors-choice', productIds?.join(',') || 'default'],
+    queryFn: async () => {
       if (productIds && productIds.length > 0) {
-        data = await productService.getProductsByIds(productIds);
-      } else {
         const response = await productService.getProducts({
-          featured: true,
-          per_page: 6,
+          // @ts-ignore
+          include: productIds,
         });
-        data = response.data;
+        return response.data || [];
       }
-
-      setProducts(data);
-    } catch (error) {
-      console.error('Error loading editor\'s choice products:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      const response = await productService.getProducts({
+        featured: true,
+        per_page: 6,
+      });
+      return response.data || [];
+    },
+    staleTime: 1000 * 60 * 10,
+  });
 
   const handleProductPress = useCallback((id: number) => {
     navigation.navigate('ProductDetail', { productId: id });
   }, [navigation]);
 
   const toggleWishlist = useCallback((id: number) => {
-    const isWishlisted = wishlistItems.some(item => item.id === id);
+    const isWishlisted = wishlistItemIds.includes(id);
     if (isWishlisted) {
       removeItem(id);
     } else {
       const product = products.find(p => p.id === id);
       if (product) addItem(product);
     }
-  }, [wishlistItems, products, addItem, removeItem]);
+  }, [wishlistItemIds, products, addItem, removeItem]);
 
   const renderItem = useCallback(({ item, index }: { item: Product; index: number }) => {
-    const isWishlisted = wishlistItems.some(w => w.id === item.id);
-    
+    const isWishlisted = wishlistItemIds.includes(item.id);
     return (
       <View style={{ width: 260 }}>
         <ProductCard
@@ -74,18 +65,38 @@ export const EditorsChoiceSection: React.FC<EditorsChoiceSectionProps> = ({
           onPress={handleProductPress}
           onWishlistPress={toggleWishlist}
           isWishlisted={isWishlisted}
-          variant="default" // Using default to match requested layout
+          variant="default"
           index={index}
         />
       </View>
     );
-  }, [handleProductPress, toggleWishlist, wishlistItems]);
+  }, [handleProductPress, toggleWishlist, wishlistItemIds]);
 
-  if (loading) {
-      return <SectionSkeleton width={260} height={300} />;
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Skeleton width={150} height={24} borderRadius={4} />
+          <Skeleton width={60} height={16} borderRadius={4} />
+        </View>
+        <FlatList
+          data={[1, 2, 3]}
+          keyExtractor={(item) => item.toString()}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+          ItemSeparatorComponent={() => <View style={{ width: 16 }} />}
+          renderItem={() => (
+            <View style={{ width: 260 }}>
+              <ProductCardSkeleton />
+            </View>
+          )}
+        />
+      </View>
+    );
   }
 
-  if (products.length === 0 && !loading) return null;
+  if (products.length === 0) return null;
 
   return (
     <View style={styles.container}>

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle, Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -9,6 +9,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface SkeletonProps {
   width?: number | string;
@@ -27,7 +29,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 
   useEffect(() => {
     shimmerPosition.value = withRepeat(
-      withTiming(1, { duration: 1500 }),
+      withTiming(1, { duration: 1200 }),
       -1,
       false
     );
@@ -39,7 +41,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
         translateX: interpolate(
           shimmerPosition.value,
           [0, 1],
-          [-200, 200]
+          [-SCREEN_WIDTH, SCREEN_WIDTH]
         ),
       },
     ],
@@ -50,7 +52,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
       style={[
         styles.container,
         {
-          width: width as number,
+          width: width as any,
           height,
           borderRadius,
         },
@@ -127,12 +129,15 @@ export const SkeletonListItem: React.FC = () => (
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: COLORS.gray[100],
+    backgroundColor: COLORS.gray[200],
     overflow: 'hidden',
   },
   shimmer: {
-    ...StyleSheet.absoluteFillObject,
-    width: 200,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    height: '100%',
+    width: SCREEN_WIDTH,
   },
   gradient: {
     flex: 1,

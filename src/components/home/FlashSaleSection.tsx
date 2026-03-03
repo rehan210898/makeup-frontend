@@ -1,17 +1,19 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useQuery } from '@tanstack/react-query';
 import { COLORS } from '../../constants';
 import { FONTS } from '../../constants/fonts';
 import productService from '../../services/productService';
 import { Product } from '../../types';
 import ProductCard from '../products/ProductCard';
 import { useWishlistStore } from '../../store/wishlistStore';
-import { SectionSkeleton } from '../skeletons/SectionSkeleton';
+import { ProductCardSkeleton } from '../skeletons/ProductCardSkeleton';
+import { Skeleton } from '../common/Skeleton';
 
 interface FlashSaleSectionProps {
   title?: string;
-  endTime?: string; // ISO date string
+  endTime?: string;
   productIds?: number[];
 }
 
@@ -63,52 +65,41 @@ export const FlashSaleSection: React.FC<FlashSaleSectionProps> = ({
   endTime,
   productIds,
 }) => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
   const navigation = useNavigation<any>();
-  const { items: wishlistItems, addItem, removeItem } = useWishlistStore();
+  const { itemIds: wishlistItemIds, addItem, removeItem } = useWishlistStore();
 
-  useEffect(() => {
-    loadProducts();
-  }, [productIds]);
-
-  const loadProducts = async () => {
-    try {
-      setLoading(true);
-      let data: Product[];
-
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ['products', 'flash-sale', productIds?.join(',') || 'default'],
+    queryFn: async () => {
       if (productIds && productIds.length > 0) {
-        data = await productService.getProductsByIds(productIds);
-      } else {
-        const response = await productService.getProducts({ on_sale: true, per_page: 10 });
-        data = response.data;
+        const response = await productService.getProducts({
+          // @ts-ignore
+          include: productIds,
+        });
+        return response.data || [];
       }
-
-      setProducts(data);
-    } catch (error) {
-      console.error('Error loading flash sale products:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      const response = await productService.getProducts({ on_sale: true, per_page: 10 });
+      return response.data || [];
+    },
+    staleTime: 1000 * 60 * 10,
+  });
 
   const handleProductPress = useCallback((id: number) => {
     navigation.navigate('ProductDetail', { productId: id });
   }, [navigation]);
 
   const toggleWishlist = useCallback((id: number) => {
-    const isWishlisted = wishlistItems.some(item => item.id === id);
+    const isWishlisted = wishlistItemIds.includes(id);
     if (isWishlisted) {
       removeItem(id);
     } else {
       const product = products.find(p => p.id === id);
       if (product) addItem(product);
     }
-  }, [wishlistItems, products, addItem, removeItem]);
+  }, [wishlistItemIds, products, addItem, removeItem]);
 
   const renderItem = useCallback(({ item, index }: { item: Product; index: number }) => {
-    const isWishlisted = wishlistItems.some(w => w.id === item.id);
-    
+    const isWishlisted = wishlistItemIds.includes(item.id);
     return (
       <View style={{ width: 150 }}>
         <ProductCard
@@ -116,18 +107,38 @@ export const FlashSaleSection: React.FC<FlashSaleSectionProps> = ({
           onPress={handleProductPress}
           onWishlistPress={toggleWishlist}
           isWishlisted={isWishlisted}
-          variant="default" // Using default variant to match layout
+          variant="default"
           index={index}
         />
       </View>
     );
-  }, [handleProductPress, toggleWishlist, wishlistItems]);
+  }, [handleProductPress, toggleWishlist, wishlistItemIds]);
 
-  if (loading) {
-    return <SectionSkeleton width={150} height={220} />;
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Skeleton width={120} height={24} borderRadius={4} />
+          <Skeleton width={100} height={24} borderRadius={6} />
+        </View>
+        <FlatList
+          data={[1, 2, 3, 4]}
+          keyExtractor={(item) => item.toString()}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+          ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
+          renderItem={() => (
+            <View style={{ width: 150 }}>
+              <ProductCardSkeleton />
+            </View>
+          )}
+        />
+      </View>
+    );
   }
 
-  if (products.length === 0 && !loading) return null;
+  if (products.length === 0) return null;
 
   // Default end time: tomorrow at midnight
   const defaultEndTime = new Date();

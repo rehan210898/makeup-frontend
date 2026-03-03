@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useCallback, memo } from 'react';
+import React, { useCallback, useMemo, memo } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from '@react-navigation/native';
+import { useQuery } from '@tanstack/react-query';
 import { COLORS } from '../../constants';
 import { FONTS } from '../../constants/fonts';
 import productService from '../../services/productService';
@@ -26,69 +27,60 @@ const PADDING = 15;
 const GAP = 10;
 
 const ProductGridSectionComponent: React.FC<ProductGridSectionProps> = ({ title, dataSource, withContainer, columns = 3, images }) => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
   const navigation = useNavigation<any>();
-  const { items: wishlistItems, addItem, removeItem } = useWishlistStore();
+  const { itemIds: wishlistItemIds, addItem, removeItem } = useWishlistStore();
 
   const itemWidth = Math.floor((width - (PADDING * 2) - (GAP * (columns - 1))) / columns);
 
-  useEffect(() => {
-    loadProducts();
-  }, [dataSource, images]);
+  const queryKey = useMemo(() =>
+    ['products', 'grid', dataSource?.ids?.join(',') || 'none', images?.join(',') || 'none'],
+    [dataSource, images]
+  );
 
-  const loadProducts = async () => {
-    if (!dataSource || !dataSource.ids) {
-      setLoading(false);
-      return;
-    }
+  const { data: products = [], isLoading } = useQuery({
+    queryKey,
+    queryFn: async () => {
+      if (!dataSource?.ids) return [];
 
-    try {
       const response = await productService.getProducts({
         // @ts-ignore
-        include: dataSource.ids
+        include: dataSource.ids,
       });
 
-      if (response && response.data) {
-        const ids = dataSource.ids;
-        let sorted = response.data.sort((a: any, b: any) => ids.indexOf(a.id) - ids.indexOf(b.id));
+      if (!response?.data) return [];
 
-        // Override images if provided
-        if (images && images.length > 0) {
-            sorted = sorted.map((p: any) => {
-                const originalIndex = ids.indexOf(p.id);
-                if (originalIndex !== -1 && images[originalIndex]) {
-                    return {
-                        ...p,
-                        images: [{ src: images[originalIndex] }] // Override main image
-                    };
-                }
-                return p;
-            });
-        }
+      const ids = dataSource.ids;
+      let sorted = response.data.sort((a: any, b: any) => ids.indexOf(a.id) - ids.indexOf(b.id));
 
-        setProducts(sorted);
+      if (images && images.length > 0) {
+        sorted = sorted.map((p: any) => {
+          const originalIndex = ids.indexOf(p.id);
+          if (originalIndex !== -1 && images[originalIndex]) {
+            return { ...p, images: [{ src: images[originalIndex] }] };
+          }
+          return p;
+        });
       }
-    } catch (error) {
-      console.error('Error loading grid products:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+
+      return sorted;
+    },
+    enabled: !!dataSource?.ids?.length,
+    staleTime: 1000 * 60 * 10,
+  });
 
   const handleProductPress = useCallback((id: number) => {
     navigation.navigate('ProductDetail', { productId: id });
   }, [navigation]);
 
   const toggleWishlist = useCallback((id: number) => {
-    const isWishlisted = wishlistItems.some(item => item.id === id);
+    const isWishlisted = wishlistItemIds.includes(id);
     if (isWishlisted) {
       removeItem(id);
     } else {
       const product = products.find(p => p.id === id);
       if (product) addItem(product);
     }
-  }, [wishlistItems, products, addItem, removeItem]);
+  }, [wishlistItemIds, products, addItem, removeItem]);
 
   const renderItem = useCallback(({ item, index }: { item: Product; index: number }) => (
     <View style={{ width: itemWidth, marginBottom: GAP, marginRight: (index + 1) % columns === 0 ? 0 : GAP }}>
@@ -96,13 +88,13 @@ const ProductGridSectionComponent: React.FC<ProductGridSectionProps> = ({ title,
         item={item}
         onPress={handleProductPress}
         onWishlistPress={toggleWishlist}
-        isWishlisted={wishlistItems.some(w => w.id === item.id)}
+        isWishlisted={wishlistItemIds.includes(item.id)}
         variant="image_only"
         hidePrice={true}
         index={index}
       />
     </View>
-  ), [handleProductPress, toggleWishlist, wishlistItems, itemWidth, columns]);
+  ), [handleProductPress, toggleWishlist, wishlistItemIds, itemWidth, columns]);
 
   const renderSkeletonItem = useCallback(() => (
     <View style={{ width: itemWidth, marginBottom: GAP, marginRight: GAP }}>
@@ -110,7 +102,7 @@ const ProductGridSectionComponent: React.FC<ProductGridSectionProps> = ({ title,
     </View>
   ), [itemWidth]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={[styles.container, withContainer && styles.withContainer]}>
         {title ? (
@@ -133,7 +125,6 @@ const ProductGridSectionComponent: React.FC<ProductGridSectionProps> = ({ title,
 
   if (!products.length) return null;
 
-  // Approx height calculation based on item width (Square items)
   const gridHeight = Math.ceil(products.length / columns) * (itemWidth + GAP);
 
   return (
@@ -143,7 +134,6 @@ const ProductGridSectionComponent: React.FC<ProductGridSectionProps> = ({ title,
           <Text style={styles.title}>{title}</Text>
         </View>
       ) : null}
-
       <View style={{ height: gridHeight, minHeight: 200 }}>
         <FlashList
           data={products}
@@ -158,7 +148,6 @@ const ProductGridSectionComponent: React.FC<ProductGridSectionProps> = ({ title,
   );
 };
 
-// Memoize to prevent unnecessary re-renders
 export const ProductGridSection = memo(ProductGridSectionComponent, (prevProps, nextProps) => {
   return (
     prevProps.title === nextProps.title &&

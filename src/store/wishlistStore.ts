@@ -4,8 +4,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Product } from '../types';
 import Toast from 'react-native-toast-message';
 
+// Step 12: Persist only IDs to reduce AsyncStorage payload (~200 bytes vs ~40KB for 20 items)
 interface WishlistState {
-  items: Product[];
+  itemIds: number[];
   addItem: (product: Product) => void;
   removeItem: (productId: number) => void;
   isInWishlist: (productId: number) => boolean;
@@ -15,13 +16,13 @@ interface WishlistState {
 export const useWishlistStore = create<WishlistState>()(
   persist(
     (set, get) => ({
-      items: [],
+      itemIds: [],
 
       addItem: (product) => {
-        const { items } = get();
-        if (items.some((item) => item.id === product.id)) return;
+        const { itemIds } = get();
+        if (itemIds.includes(product.id)) return;
 
-        set({ items: [...items, product] });
+        set({ itemIds: [...itemIds, product.id] });
         Toast.show({
           type: 'success',
           text1: 'Added to Wishlist',
@@ -32,7 +33,7 @@ export const useWishlistStore = create<WishlistState>()(
 
       removeItem: (productId) => {
         set((state) => ({
-          items: state.items.filter((item) => item.id !== productId),
+          itemIds: state.itemIds.filter((id) => id !== productId),
         }));
         Toast.show({
           type: 'info',
@@ -42,10 +43,10 @@ export const useWishlistStore = create<WishlistState>()(
       },
 
       isInWishlist: (productId) => {
-        return get().items.some((item) => item.id === productId);
+        return get().itemIds.includes(productId);
       },
 
-      clearWishlist: () => set({ items: [] }),
+      clearWishlist: () => set({ itemIds: [] }),
     }),
     {
       name: 'wishlist-storage',

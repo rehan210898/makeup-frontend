@@ -5,7 +5,6 @@ import { Platform } from 'react-native';
 import ApiClient from './api';
 
 // Configure how notifications behave when the app is in foreground
-// Works in dev-client and production builds (not Expo Go)
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -17,101 +16,115 @@ Notifications.setNotificationHandler({
 });
 
 class NotificationService {
+  private registeredToken: string | null = null;
+  private registrationRetryCount = 0;
+  private maxRetries = 3;
+
   /**
    * Registers the device for push notifications and returns the Expo Push Token.
    */
   async registerForPushNotificationsAsync(): Promise<string | undefined> {
-    let token;
+    let token: string | undefined;
 
+    // Set up Android notification channel (required for Android 8+)
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
+        name: 'Default',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#FF231F7C',
+        sound: 'default',
       });
     }
 
-    if (Device.isDevice) {
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-      
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-      
-      if (finalStatus !== 'granted') {
-        console.log('Permission to receive push notifications was denied');
-        return;
+    if (!Device.isDevice) {
+      console.log('Push notifications require a physical device');
+      return undefined;
+    }
+
+    // Check and request permissions
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+
+    if (finalStatus !== 'granted') {
+      console.log('Push notification permission denied');
+      return undefined;
+    }
+
+    // Get the Expo push token
+    try {
+      const projectId =
+        Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+
+      if (!projectId) {
+        console.warn('EAS projectId not found in app config');
       }
 
-      // Get the token that uniquely identifies this device
-      try {
-        const projectId =
-          Constants?.expoConfig?.extra?.eas?.projectId || Constants?.easConfig?.projectId;
-          
-        if (!projectId) {
-            console.warn('Project ID not found in app config. Ensure EAS projectId is set.');
-        }
-
-        token = (await Notifications.getExpoPushTokenAsync({
-          projectId,
-        })).data;
-        
-        console.log('Expo Push Token:', token);
-      } catch (error) {
-        console.error('Error fetching push token:', error);
-      }
-    } else {
-      console.log('Must use physical device for Push Notifications');
+      const pushToken = await Notifications.getExpoPushTokenAsync({
+        projectId,
+      });
+      token = pushToken.data;
+      this.registeredToken = token;
+      console.log('Expo Push Token:', token);
+    } catch (error: any) {
+      console.error('Failed to get push token:', error.message || error);
     }
 
     return token;
   }
 
   /**
-   * Send the token to the backend to associate with the current user
+   * Send the token to the backend with retry logic
    */
-  async registerTokenWithBackend(token: string) {
+  async registerTokenWithBackend(token: string): Promise<boolean> {
     try {
-      // NOTE: Ensure your BFF/API proxies this request to the WP Plugin endpoint
-      // OR ApiClient needs to hit the WP API directly if the BFF doesn't expose it.
-      // Assuming ApiClient hits the BFF, and we need to add a route there or hit WP directly.
-      // For now, assuming direct call via ApiClient (which points to BFF/WP).
-      // The WP Plugin route is: /wp-json/muo-push/v1/register
-      
-      // If ApiClient.baseURL is the BFF, we might need a specific proxy route.
-      // Or if ApiClient points to WP, we use the route directly.
-      // Given current setup, ApiClient points to BFF.
-      // We should probably add a proxy route in BFF or assume BFF proxies unknown routes?
-      // Actually, let's assume we add a route in BFF or call it directly.
-      
-      // Since we don't have a BFF route for this yet, let's assume we call a new BFF endpoint
-      // that forwards to WP, OR we rely on a custom implementation.
-      // Let's use a generic 'notifications/register' endpoint that we will assume exists or add later.
-      // Or better, stick to the WP path structure if the BFF proxies it.
-      
-      await ApiClient.post('/notifications/register', { 
-        token, 
-        platform: Platform.OS 
+      await ApiClient.post('/notifications/register', {
+        token,
+        platform: Platform.OS,
       });
+      this.registrationRetryCount = 0;
       console.log('Push token registered with backend');
-    } catch (error) {
-      console.error('Error registering push token with backend:', error);
+      return true;
+    } catch (error: any) {
+      console.error('Failed to register token with backend:', error.message || error);
+
+      // Retry with exponential backoff
+      if (this.registrationRetryCount < this.maxRetries) {
+        this.registrationRetryCount++;
+        const delay = Math.pow(2, this.registrationRetryCount) * 1000;
+        console.log(`Retrying token registration in ${delay}ms (attempt ${this.registrationRetryCount})`);
+        setTimeout(() => this.registerTokenWithBackend(token), delay);
+      }
+      return false;
     }
   }
 
   /**
    * Remove the token from backend on logout
    */
-  async removeTokenFromBackend(token: string) {
+  async removeTokenFromBackend(token?: string): Promise<void> {
+    const tokenToRemove = token || this.registeredToken;
+    if (!tokenToRemove) return;
+
     try {
-      await ApiClient.post('/notifications/remove', { token });
+      await ApiClient.post('/notifications/remove', { token: tokenToRemove });
+      this.registeredToken = null;
       console.log('Push token removed from backend');
-    } catch (error) {
-      console.error('Error removing push token from backend:', error);
+    } catch (error: any) {
+      console.error('Failed to remove push token:', error.message || error);
     }
+  }
+
+  /**
+   * Get the currently registered token
+   */
+  getRegisteredToken(): string | null {
+    return this.registeredToken;
   }
 
   /**

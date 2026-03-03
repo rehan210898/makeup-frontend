@@ -2,24 +2,41 @@ import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
+import { useQuery } from '@tanstack/react-query';
 import { COLORS } from '../../constants';
 import { FONTS } from '../../constants/fonts';
 import { useWishlistStore } from '../../store/wishlistStore';
 import { useCartStore } from '../../store/cartStore';
 import { Product } from '../../types';
+import api from '../../services/api';
 import CartIcon from '../../components/icons/CartIcon';
+import AddToBagIcon from '../../components/icons/AddToBagIcon';
 import ArrowLeftIcon from '../../components/icons/ArrowLeftIcon';
 import { Feather } from '@expo/vector-icons';
+import { WishlistSkeleton } from '../../components/skeletons/WishlistSkeleton';
 
 const { width } = Dimensions.get('window');
 
 export default function WishlistScreen() {
   const navigation = useNavigation();
-  const { items, removeItem } = useWishlistStore();
+  const { itemIds, removeItem } = useWishlistStore();
   const { addItem: addToCart, itemCount } = useCartStore();
 
-  // Safety filter to remove corrupt items (e.g. from previous bugs)
-  const validItems = items.filter(item => item && typeof item.id === 'number');
+  // Step 12: Fetch product data for wishlist IDs via React Query
+  const { data: wishlistProducts = [], isLoading: isLoadingProducts } = useQuery({
+    queryKey: ['wishlist-products', itemIds],
+    queryFn: async () => {
+      if (itemIds.length === 0) return [];
+      const response = await api.get<{ success: boolean; data: Product[] }>(
+        `/products?include=${itemIds.join(',')}&per_page=${itemIds.length}`
+      );
+      return response.data;
+    },
+    enabled: itemIds.length > 0,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const validItems = wishlistProducts.filter((item: Product) => item && typeof item.id === 'number');
 
   const handleProductPress = (productId: number) => {
     navigation.navigate('ProductDetail' as any, { productId });
@@ -65,7 +82,7 @@ export default function WishlistScreen() {
             style={styles.moveToCartBtn}
             onPress={() => handleAddToCart(item)}
         >
-            <Text style={styles.moveToCartText}>Add to Cart</Text>
+            <AddToBagIcon size={20} color={COLORS.primary} />
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -77,7 +94,7 @@ export default function WishlistScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <ArrowLeftIcon color={COLORS.primary} size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Wishlist ({validItems.length})</Text>
+        <Text style={styles.headerTitle}>Wishlist ({itemIds.length})</Text>
         <TouchableOpacity onPress={handleGoToCart} style={styles.headerCartBtn}>
           <CartIcon size={24} color={COLORS.primary} />
           {itemCount > 0 && (
@@ -88,7 +105,9 @@ export default function WishlistScreen() {
         </TouchableOpacity>
       </View>
 
-      {validItems.length === 0 ? (
+      {isLoadingProducts && itemIds.length > 0 ? (
+        <WishlistSkeleton />
+      ) : validItems.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Feather name="heart" size={60} color={COLORS.text.muted} style={{marginBottom: 20}} />
           <Text style={styles.emptyText}>Your wishlist is empty</Text>
@@ -218,8 +237,7 @@ const styles = StyleSheet.create({
   },
   moveToCartBtn: {
     backgroundColor: COLORS.white,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    padding: 10,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: COLORS.primary,

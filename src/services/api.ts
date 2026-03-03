@@ -39,11 +39,11 @@ class ApiClient {
         if (this.cookieMap.size > 0) {
             config.headers['Cookie'] = Array.from(this.cookieMap.values()).join('; ');
         }
-        console.log(`📤 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+        if (__DEV__) console.log(`📤 API Request: ${config.method?.toUpperCase()} ${config.url}`);
         return config;
       },
       (error) => {
-        console.error('📤 Request Error:', error);
+        if (__DEV__) console.error('📤 Request Error:', error);
         return Promise.reject(error);
       }
     );
@@ -60,7 +60,7 @@ class ApiClient {
 
         if (nonce) {
             this.nonce = nonce;
-            console.log('🔑 Updated Nonce:', this.nonce);
+            if (__DEV__) console.log('🔑 Updated Nonce:', this.nonce);
         }
         
         const setCookie = response.headers['set-cookie'];
@@ -76,10 +76,10 @@ class ApiClient {
       },
       (error) => {
         if (error.response?.status === 401) {
-          console.warn('⚠️ Unauthorized - Logging out');
+          if (__DEV__) console.warn('⚠️ Unauthorized - Logging out');
           useUserStore.getState().logout();
         }
-        console.error('📥 Response Error:', error.response?.data || error.message);
+        if (__DEV__) console.error('📥 Response Error:', error.response?.data || error.message);
         return Promise.reject(error);
       }
     );

@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 // API Configuration
 const PROD_URL = 'https://app.makeupocean.com/api/v1';
 // Ensure this IP matches your computer's IP address (ipconfig/ifconfig)
-const DEV_URL = 'http://192.168.2.105:3000/api/v1';
+const DEV_URL = 'http://192.168.2.242:3000/api/v1';
 
 // Use DEV_URL only in Expo Go during local development, PROD_URL for all builds
 const BASE_URL = __DEV__ && Constants.appOwnership === 'expo' ? DEV_URL : PROD_URL;
@@ -11,7 +11,7 @@ const BASE_URL = __DEV__ && Constants.appOwnership === 'expo' ? DEV_URL : PROD_U
 export const API_CONFIG = {
   BASE_URL,
   API_KEY: '5aa92e6b5a9c561fff47ea95c872fc9b5c52652735029cb9fdf271eb9fc1e4fa',
-  TIMEOUT: 30000,
+  TIMEOUT: 15000,
 };
 
 // Colors - Stitch UI Pink/Magenta Theme

@@ -18,6 +18,7 @@ import FilterIcon from '../../components/icons/FilterIcon';
 import CartIcon from '../../components/icons/CartIcon';
 import { ProductListSkeleton } from '../../components/skeletons/ProductListSkeleton';
 import SearchIcon from '../../components/icons/SearchIcon';
+import { ScrollToTopButton } from '../../components/common/ScrollToTopButton';
 
 type ProductListRouteProp = RouteProp<RootStackParamList, 'ProductList'>;
 type ProductListNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -78,14 +79,27 @@ export default function ProductListScreen() {
   // Animation Refs
   const scrollY = useRef(new Animated.Value(0)).current;
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+  const flatListRef = useRef<FlatList>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   const { addItem, getItemQuantity, itemCount } = useCartStore();
   const { addItem: addToWishlist, removeItem: removeFromWishlist } = useWishlistStore();
-  const wishlistItems = useWishlistStore((state) => state.items);
+  const wishlistItemIds = useWishlistStore((state) => state.itemIds);
 
   const isInWishlist = useCallback((id: number) => {
-    return wishlistItems.some(p => p.id === id);
-  }, [wishlistItems]);
+    return wishlistItemIds.includes(id);
+  }, [wishlistItemIds]);
+
+  useEffect(() => {
+    const listenerId = scrollY.addListener(({ value }) => {
+      setShowScrollTop(value > 400);
+    });
+    return () => scrollY.removeListener(listenerId);
+  }, [scrollY]);
+
+  const scrollToTop = useCallback(() => {
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, []);
 
   useEffect(() => {
     navigation.setOptions({ headerShown: false });
@@ -444,19 +458,21 @@ export default function ProductListScreen() {
         <ProductListSkeleton />
       ) : (
         <Animated.FlatList
+          ref={flatListRef}
           data={products}
           extraData={wishlistItems}
           renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}
           numColumns={2}
           contentContainerStyle={{
-            paddingTop: TOTAL_HEADER_HEIGHT + 10, 
+            paddingTop: TOTAL_HEADER_HEIGHT + 10,
             paddingHorizontal: 10,
             paddingBottom: 20
           }}
           columnWrapperStyle={styles.columnWrapper}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
+          scrollEventThrottle={16}
           onScroll={Animated.event(
             [{ nativeEvent: { contentOffset: { y: scrollY } } }],
             { useNativeDriver: true }
@@ -474,6 +490,8 @@ export default function ProductListScreen() {
           }
         />
       )}
+
+      <ScrollToTopButton visible={showScrollTop} onPress={scrollToTop} bottom={20} />
 
       <Modal
         animationType="slide"

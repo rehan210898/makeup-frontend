@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import * as Notifications from 'expo-notifications';
 import * as Linking from 'expo-linking';
 import Constants from 'expo-constants';
@@ -22,50 +22,11 @@ export const useNotifications = () => {
   const notificationListener = useRef<Notifications.Subscription | undefined>(undefined);
   const responseListener = useRef<Notifications.Subscription | undefined>(undefined);
 
-  useEffect(() => {
-    // Push notifications don't work in Expo Go - skip registration
-    if (Constants.appOwnership === 'expo') {
-      console.log('Push Notifications disabled in Expo Go. Use dev-client build for testing.');
-      return;
-    }
-
-    // 1. Register for push notifications on mount
-    NotificationService.registerForPushNotificationsAsync().then(token => {
-      setExpoPushToken(token);
-      if (token) {
-        NotificationService.registerTokenWithBackend(token);
-      }
-    });
-
-    // 2. Listen for notifications received while app is foregrounded
-    notificationListener.current = NotificationService.addNotificationReceivedListener(notification => {
-      setNotification(notification);
-    });
-
-    // 3. Listen for user interaction (tapping the notification)
-    responseListener.current = NotificationService.addNotificationResponseReceivedListener(handleNotificationResponse);
-
-    // 4. Check if app was opened by a notification (Cold Start)
-    Notifications.getLastNotificationResponseAsync().then(response => {
-      if (response) {
-        handleNotificationResponse(response);
-      }
-    });
-
-    return () => {
-      // Cleanup listeners
-      if (notificationListener.current) {
-        NotificationService.removeSubscription(notificationListener.current);
-      }
-      if (responseListener.current) {
-        NotificationService.removeSubscription(responseListener.current);
-      }
-    };
-  }, []);
-
-  const handleNotificationResponse = (response: Notifications.NotificationResponse) => {
+  const handleNotificationResponse = useCallback((response: Notifications.NotificationResponse) => {
     const data = response.notification.request.content.data as any;
-    console.log('Notification Data:', data);
+    console.log('Notification tapped, data:', JSON.stringify(data));
+
+    if (!data) return;
 
     // Priority 1: Direct deep link URL
     if (data.click_action) {
@@ -78,36 +39,86 @@ export const useNotifications = () => {
       const screenName = SCREEN_MAP[data.screen] || data.screen;
       const params = data.params || {};
 
-      // Map campaign param names to navigation param names
-      if (screenName === 'ProductList' && params.categoryId) {
-        navigate('ProductList', {
-          categoryId: params.categoryId,
-          categoryName: params.name || params.categoryName || '',
-        });
-      } else if (screenName === 'ProductDetail' && params.productId) {
-        navigate('ProductDetail', { productId: params.productId });
-      } else if (screenName === 'OrderTracking' && params.orderId) {
-        navigate('OrderTracking', { orderId: params.orderId });
-      } else {
-        navigate(screenName as any, params);
+      try {
+        if (screenName === 'ProductList' && params.categoryId) {
+          navigate('ProductList', {
+            categoryId: params.categoryId,
+            categoryName: params.name || params.categoryName || '',
+          });
+        } else if (screenName === 'ProductDetail' && params.productId) {
+          navigate('ProductDetail', { productId: params.productId });
+        } else if (screenName === 'OrderTracking' && params.orderId) {
+          navigate('OrderTracking', { orderId: params.orderId });
+        } else {
+          navigate(screenName as any, params);
+        }
+      } catch (navError) {
+        console.error('Navigation from notification failed:', navError);
       }
       return;
     }
 
     // Priority 3: Typed notification payloads (order updates, promotions)
-    if (data.type === 'PROMOTION' && data.link) {
-      Linking.openURL(Linking.createURL(data.link));
-    } else if (data.type === 'ORDER_UPDATE' || data.type === 'ORDER_CONFIRMATION') {
-      if (data.orderId) {
-        navigate('OrderTracking', { orderId: data.orderId });
+    try {
+      if (data.type === 'PROMOTION' && data.link) {
+        Linking.openURL(Linking.createURL(data.link));
+      } else if (data.type === 'ORDER_UPDATE' || data.type === 'ORDER_CONFIRMATION') {
+        if (data.orderId) {
+          navigate('OrderTracking', { orderId: data.orderId });
+        }
+      } else if (data.type === 'PRODUCT_RESTOCK' && data.productId) {
+        navigate('ProductDetail', { productId: data.productId });
       }
-    } else if (data.type === 'PRODUCT_RESTOCK' && data.productId) {
-      navigate('ProductDetail', { productId: data.productId });
+    } catch (navError) {
+      console.error('Navigation from typed notification failed:', navError);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // Skip push registration in Expo Go (tokens won't work for real push)
+    const isExpoGo = Constants.appOwnership === 'expo';
+    if (isExpoGo) {
+      console.log('Running in Expo Go - push notifications limited to local only');
+    }
+
+    // Register for push notifications
+    NotificationService.registerForPushNotificationsAsync().then(token => {
+      setExpoPushToken(token);
+      if (token) {
+        NotificationService.registerTokenWithBackend(token);
+      }
+    });
+
+    // Listen for notifications received while app is in foreground
+    notificationListener.current = NotificationService.addNotificationReceivedListener(
+      notif => setNotification(notif)
+    );
+
+    // Listen for user tapping on a notification
+    responseListener.current = NotificationService.addNotificationResponseReceivedListener(
+      handleNotificationResponse
+    );
+
+    // Check if app was opened by a notification (Cold Start)
+    Notifications.getLastNotificationResponseAsync().then(response => {
+      if (response) {
+        // Small delay to ensure navigation is ready
+        setTimeout(() => handleNotificationResponse(response), 500);
+      }
+    });
+
+    return () => {
+      if (notificationListener.current) {
+        NotificationService.removeSubscription(notificationListener.current);
+      }
+      if (responseListener.current) {
+        NotificationService.removeSubscription(responseListener.current);
+      }
+    };
+  }, [handleNotificationResponse]);
 
   return {
     expoPushToken,
-    notification
+    notification,
   };
 };

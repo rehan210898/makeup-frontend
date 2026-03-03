@@ -43,7 +43,7 @@ export const useCartServer = (localItems: CartItem[], defaultPaymentMethod: stri
       console.log('🔄 Syncing/Fetching Server Cart...', cartSignature, defaultPaymentMethod);
       return await CartService.syncCart(localItems, defaultPaymentMethod);
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 0, // Cart data should always be fresh
   });
 
   // 2. Fetch Available Coupons

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { COLORS } from '../../constants';
 import { orderService } from '../../services/orderService';
 import { Order } from '../../types';
 import ArrowLeftIcon from '../../components/icons/ArrowLeftIcon';
+import { OrderTrackingSkeleton } from '../../components/skeletons/OrderTrackingSkeleton';
 
 // Visual steps for the order progress tracker
 const ORDER_STEPS = [
@@ -133,11 +134,7 @@ export default function OrderTrackingScreen() {
   };
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <OrderTrackingSkeleton />;
   }
 
   if (!order) {
