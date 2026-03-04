@@ -17,7 +17,8 @@ interface CartStore {
     quantity?: number,
     variationId?: number,
     selectedAttributes?: { [key: string]: string },
-    isStitched?: boolean
+    isStitched?: boolean,
+    variation?: ProductVariation
   ) => boolean;
   removeItem: (productId: number, variationId?: number, isStitched?: boolean) => void;
   updateQuantity: (productId: number, quantity: number, variationId?: number, isStitched?: boolean) => boolean;
@@ -55,7 +56,7 @@ export const useCartStore = create<CartStore>()(
           });
       },
 
-      addItem: (product, quantity = 1, variationId, selectedAttributes, isStitched = false) => {
+      addItem: (product, quantity = 1, variationId, selectedAttributes, isStitched = false, variation) => {
         const state = get();
         // Item uniqueness now depends on product_id, variation_id AND isStitched status
         const existingItem = state.items.find(
@@ -116,11 +117,16 @@ export const useCartStore = create<CartStore>()(
             newItems = [...state.items];
             newItems[existingItemIndex].quantity += quantity;
           } else {
+            // Use variation price if available so subtotal is accurate
+            const storedProduct = variation
+              ? { ...product, price: variation.price, regularPrice: variation.regular_price || product.regularPrice }
+              : product;
             const newItem: CartItem = {
               product_id: product.id,
               variation_id: variationId,
               quantity,
-              product,
+              product: storedProduct,
+              variation,
               selectedAttributes,
               isStitched,
             };

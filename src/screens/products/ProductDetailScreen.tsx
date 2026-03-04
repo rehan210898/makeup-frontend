@@ -12,6 +12,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Animated,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
@@ -23,7 +24,7 @@ import { COLORS } from '../../constants';
 import { FONTS } from '../../constants/fonts';
 import { useCartStore } from '../../store/cartStore';
 import { useWishlistStore } from '../../store/wishlistStore';
-import Toast from 'react-native-toast-message';
+import { toast } from '../../store/toastStore';
 import ProductCard from '../../components/products/ProductCard';
 import VariationSelector from '../../components/products/VariationSelector';
 import IndianRupeeIcon from '../../components/products/IndianRupeeIcon';
@@ -52,7 +53,7 @@ const ReviewCard = memo(({ review }: { review: Review }) => (
         {'⭐'.repeat(review.rating)}
       </Text>
     </View>
-    <Text style={styles.reviewText}>{review.review}</Text>
+    <Text style={styles.reviewText}>{review.review.replace(/<[^>]*>/g, '')}</Text>
     <Text style={styles.reviewDate}>
       {new Date(review.date_created).toLocaleDateString('en-US', {
         year: 'numeric',
@@ -96,6 +97,10 @@ export default function ProductDetailScreen() {
     rating: 5,
   });
   
+  const [noticeText, setNoticeText] = useState('');
+  const noticeOpacity = useRef(new Animated.Value(0)).current;
+  const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const scrollViewRef = useRef<ScrollView>(null);
   const flatListRef = useRef<FlatList>(null);
   const loadingRef = useRef(false);
@@ -108,16 +113,10 @@ export default function ProductDetailScreen() {
     
     if (isInWishlist(item.id)) {
       removeFromWishlist(item.id);
-      Toast.show({
-        type: 'success',
-        text1: 'Removed from wishlist',
-      });
+      toast.success('Removed from wishlist');
     } else {
       addToWishlist(item);
-      Toast.show({
-        type: 'success',
-        text1: 'Added to wishlist',
-      });
+      toast.success('Added to wishlist');
     }
   };
 
@@ -214,11 +213,7 @@ export default function ProductDetailScreen() {
       loadReviews(productId);
     } catch (error: any) {
       console.error('Error loading product:', error.message || 'Unknown error');
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Failed to load product',
-      });
+      toast.error('Error', 'Failed to load product');
     } finally {
       setLoading(false);
     }
@@ -240,11 +235,7 @@ export default function ProductDetailScreen() {
     if (!product) return;
     
     if (!reviewForm.reviewer || !reviewForm.reviewer_email || !reviewForm.review) {
-      Toast.show({
-        type: 'error',
-        text1: 'Missing Fields',
-        text2: 'Please fill all required fields',
-      });
+      toast.error('Missing Fields', 'Please fill all required fields');
       return;
     }
 
@@ -253,11 +244,7 @@ export default function ProductDetailScreen() {
       // Call your API to submit review
       // await productService.submitReview(product.id, reviewForm);
       
-      Toast.show({
-        type: 'success',
-        text1: 'Review Submitted',
-        text2: 'Thank you for your feedback!',
-      });
+      toast.success('Review Submitted', 'Thank you for your feedback!');
       
       setShowReviewForm(false);
       setReviewForm({
@@ -270,11 +257,7 @@ export default function ProductDetailScreen() {
       // Reload reviews
       loadReviews(product.id);
     } catch (error) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Failed to submit review',
-      });
+      toast.error('Error', 'Failed to submit review');
     } finally {
       setSubmittingReview(false);
     }
@@ -380,52 +363,67 @@ export default function ProductDetailScreen() {
     }
   };
 
+  const needsVariationSelection = () => {
+    if (!product || product.type !== 'variable') return false;
+    const variationAttrs = product.attributes?.filter(a => a.variation) || [];
+    return variationAttrs.length > 0 && !selectedVariation;
+  };
+
+  const showVariationNotice = () => {
+    const unselected = (product?.attributes?.filter(a => a.variation) || [])
+      .filter(a => !selectedAttributes[a.name])
+      .map(a => a.name);
+    const msg = unselected.length > 0
+      ? `Please select ${unselected.join(', ')}`
+      : 'Choose size, color, or other options';
+
+    if (noticeTimer.current) clearTimeout(noticeTimer.current);
+    setNoticeText(msg);
+    Animated.timing(noticeOpacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+    noticeTimer.current = setTimeout(() => {
+      Animated.timing(noticeOpacity, { toValue: 0, duration: 300, useNativeDriver: true }).start();
+    }, 2000);
+  };
+
   const handleAddToCart = () => {
     if (!product) return;
 
-    if (product.type === 'variable' && !selectedVariation) {
-      Toast.show({
-        type: 'error',
-        text1: 'Please select options',
-        text2: 'Choose size, color, or other options',
-      });
+    if (needsVariationSelection()) {
+      showVariationNotice();
       return;
     }
 
-    const success = addItem(product, 1, selectedVariation?.id, selectedAttributes, isStitched);
-    
+    const success = addItem(product, 1, selectedVariation?.id, selectedAttributes, isStitched, selectedVariation || undefined);
+
     if (success) {
-      Toast.show({
-        type: 'success',
-        text1: 'Added to cart',
-        text2: `${product.name} ${isStitched ? '+ Stitching' : ''} added successfully`,
-      });
+      toast.success('Added to cart', `${product.name} ${isStitched ? '+ Stitching' : ''} added successfully`);
     }
   };
 
   const handleBuyNow = () => {
     if (!product) return;
 
-    if (product.type === 'variable' && !selectedVariation) {
-      Toast.show({
-        type: 'error',
-        text1: 'Please select options',
-        text2: 'Choose size, color, or other options',
-      });
+    if (needsVariationSelection()) {
+      showVariationNotice();
       return;
     }
 
-    const success = addItem(product, 1, selectedVariation?.id, selectedAttributes, isStitched);
-    if (success) {
-       navigation.navigate('Checkout', {
-         buyNowItem: {
-           productId: product.id,
-           variationId: selectedVariation?.id,
-           quantity: 1,
-           isStitched,
-         },
-       });
+    // If item is already in cart, go to checkout with current quantity
+    const existingQty = getItemQuantity(product.id, selectedVariation?.id);
+    if (existingQty === 0) {
+      const success = addItem(product, 1, selectedVariation?.id, selectedAttributes, isStitched, selectedVariation || undefined);
+      if (!success) return;
     }
+
+    const qty = existingQty > 0 ? existingQty : 1;
+    navigation.navigate('Checkout', {
+      buyNowItem: {
+        productId: product.id,
+        variationId: selectedVariation?.id,
+        quantity: qty,
+        isStitched,
+      },
+    });
   };
 
   const handleProductPress = useCallback((productId: number) => {
@@ -781,19 +779,6 @@ export default function ProductDetailScreen() {
                 </View>
               </View>
 
-              {product.categories && product.categories.length > 0 && (
-                <View style={styles.categoriesSection}>
-                  <Text style={styles.sectionLabel}>Categories:</Text>
-                  <View style={styles.categoryTags}>
-                    {product.categories.map((cat) => (
-                      <View key={cat.id} style={styles.categoryTag}>
-                        <Text style={styles.categoryTagText}>{cat.name}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
-
               {product.type === 'variable' && product.attributes && product.attributes.length > 0 && (
                 <View style={styles.section}>
                   <VariationSelector
@@ -935,6 +920,13 @@ export default function ProductDetailScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Variation notice overlay */}
+      <Animated.View style={[styles.noticeOverlay, { opacity: noticeOpacity }]} pointerEvents="none">
+        <View style={styles.noticeBubble}>
+          <Text style={styles.noticeText}>{noticeText}</Text>
+        </View>
+      </Animated.View>
     </View>
   );
 }
@@ -1217,31 +1209,10 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontFamily: FONTS.display.regular,
   },
-  categoriesSection: {
-    marginBottom: 20,
-  },
   sectionLabel: {
     fontSize: 14,
     color: COLORS.text.secondary,
     marginBottom: 8,
-    fontFamily: FONTS.display.medium,
-  },
-  categoryTags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  categoryTag: {
-    backgroundColor: 'rgba(212, 175, 55, 0.1)', // Subtle Gold
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(212, 175, 55, 0.2)',
-  },
-  categoryTagText: {
-    fontSize: 12,
-    color: COLORS.primary, // Darker text for readability
     fontFamily: FONTS.display.medium,
   },
   section: {
@@ -1545,12 +1516,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F5F5F5',
     borderRadius: 12,
+    height: 46,
     paddingHorizontal: 4,
-    paddingVertical: 4,
   },
   quantityBtn: {
-    width: 34,
-    height: 34,
+    width: 32,
+    height: 32,
     borderRadius: 10,
     backgroundColor: COLORS.white,
     justifyContent: 'center',
@@ -1577,7 +1548,7 @@ const styles = StyleSheet.create({
   buyNowBtn: {
     backgroundColor: COLORS.black,
     borderWidth: 0,
-    paddingVertical: 14,
+    height: 46,
     paddingHorizontal: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -1595,12 +1566,12 @@ const styles = StyleSheet.create({
   },
   addToCartBtn: {
     backgroundColor: COLORS.primary,
-    paddingVertical: 14,
+    height: 46,
     paddingHorizontal: 16,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 54, // Ensures it looks like a nice square when it's just the icon
+    minWidth: 46,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -1620,5 +1591,23 @@ const styles = StyleSheet.create({
   },
   disabledText: {
     color: '#999',
+  },
+  noticeOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noticeBubble: {
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 10,
+    maxWidth: '80%',
+  },
+  noticeText: {
+    color: '#fff',
+    fontSize: 14,
+    fontFamily: FONTS.display.medium,
+    textAlign: 'center',
   },
 });

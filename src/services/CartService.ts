@@ -50,7 +50,13 @@ class CartService {
       items: items.map(item => ({
         product_id: item.product_id,
         quantity: item.quantity,
-        variation_id: item.variation_id
+        variation_id: item.variation_id,
+        variation: item.selectedAttributes
+          ? Object.entries(item.selectedAttributes).map(([name, value]) => ({
+              attribute: name,
+              value,
+            }))
+          : undefined,
       }))
     };
 

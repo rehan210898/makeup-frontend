@@ -1,4 +1,4 @@
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 
 // API Configuration
 const PROD_URL = 'https://app.makeupocean.com/api/v1';
@@ -6,7 +6,8 @@ const PROD_URL = 'https://app.makeupocean.com/api/v1';
 const DEV_URL = 'http://192.168.2.242:3000/api/v1';
 
 // Use DEV_URL only in Expo Go during local development, PROD_URL for all builds
-const BASE_URL = __DEV__ && Constants.appOwnership === 'expo' ? DEV_URL : PROD_URL;
+const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+const BASE_URL = __DEV__ && isExpoGo ? DEV_URL : PROD_URL;
 
 export const API_CONFIG = {
   BASE_URL,

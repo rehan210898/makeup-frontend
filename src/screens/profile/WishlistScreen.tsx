@@ -53,40 +53,61 @@ export default function WishlistScreen() {
     navigation.navigate('MainTabs' as any, { screen: 'CartTab' });
   };
 
-  const renderItem = ({ item }: { item: Product }) => (
-    <TouchableOpacity 
-      style={styles.card} 
-      onPress={() => handleProductPress(item.id)}
-      activeOpacity={0.7}
-    >
-      <Image
-        source={{ uri: item.images?.[0]?.src }}
-        style={styles.image}
-        contentFit="cover"
-        transition={200}
-      />
-      <View style={styles.info}>
-        <View style={styles.rowBetween}>
-            <Text style={styles.name} numberOfLines={2}>{item.name}</Text>
-            <TouchableOpacity 
-                style={styles.removeBtn}
-                onPress={() => removeItem(item.id)}
-            >
-                <Feather name="x" size={18} color={COLORS.text.muted} />
-            </TouchableOpacity>
+  const renderItem = ({ item }: { item: Product }) => {
+    const regularPrice = item.regularPrice;
+    const price = item.price;
+    const isOnSale = regularPrice && parseFloat(regularPrice) > parseFloat(price);
+    const discountPercent = isOnSale
+      ? Math.round(((parseFloat(regularPrice) - parseFloat(price)) / parseFloat(regularPrice)) * 100)
+      : 0;
+
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => handleProductPress(item.id)}
+        activeOpacity={0.9}
+      >
+        <View style={styles.imageWrapper}>
+          <Image
+            source={{ uri: item.images?.[0]?.src || item.image || item.thumbnail || undefined }}
+            style={styles.image}
+            contentFit="cover"
+            transition={200}
+          />
         </View>
-        
-        <Text style={styles.price}>₹ {item.price}</Text>
-        
-        <TouchableOpacity 
-            style={styles.moveToCartBtn}
-            onPress={() => handleAddToCart(item)}
-        >
-            <AddToBagIcon size={20} color={COLORS.primary} />
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
-  );
+        <View style={styles.info}>
+          <View style={styles.itemHeader}>
+            <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
+            <TouchableOpacity
+              style={styles.removeBtn}
+              onPress={() => removeItem(item.id)}
+            >
+              <Text style={styles.removeText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.itemFooter}>
+            <View>
+              {isOnSale && (
+                <View style={styles.discountRow}>
+                  <Text style={styles.regularPrice}>₹ {regularPrice}</Text>
+                  <Text style={styles.discountText}>{discountPercent}% OFF</Text>
+                </View>
+              )}
+              <Text style={styles.price}>₹ {price}</Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.addToCartBtn}
+              onPress={() => handleAddToCart(item)}
+            >
+              <AddToBagIcon size={22} color={COLORS.white} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -188,66 +209,98 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: COLORS.white,
     borderRadius: 16,
-    marginBottom: 16,
-    flexDirection: 'row',
     padding: 12,
+    marginBottom: 12,
+    flexDirection: 'row',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowRadius: 8,
+    elevation: 2,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.03)',
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  imageWrapper: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    borderRadius: 10,
+    backgroundColor: '#fff',
   },
   image: {
-    width: 80,
-    height: 100,
-    borderRadius: 12,
-    backgroundColor: '#f5f5f5',
+    width: 70,
+    height: 90,
+    borderRadius: 10,
+    backgroundColor: '#F5F5F5',
   },
   info: {
     flex: 1,
-    marginLeft: 16,
+    marginLeft: 14,
     justifyContent: 'space-between',
     paddingVertical: 2,
   },
-  rowBetween: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
+  itemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
   name: {
     fontSize: 14,
     fontFamily: FONTS.display.medium,
     color: COLORS.text.main,
-    marginBottom: 4,
     flex: 1,
-    marginRight: 10,
-    lineHeight: 20,
-  },
-  price: {
-    fontSize: 16,
-    fontFamily: FONTS.display.bold,
-    color: COLORS.primary,
+    marginRight: 8,
+    lineHeight: 18,
   },
   removeBtn: {
     padding: 4,
     marginTop: -4,
     marginRight: -4,
   },
-  moveToCartBtn: {
-    backgroundColor: COLORS.white,
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    alignSelf: 'flex-start',
+  removeText: {
+    fontSize: 14,
+    color: '#CCC',
+  },
+  itemFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: 8,
   },
-  moveToCartText: {
-    color: COLORS.primary,
+  discountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  regularPrice: {
     fontSize: 12,
+    color: COLORS.text.muted,
+    textDecorationLine: 'line-through',
+  },
+  discountText: {
+    fontSize: 10,
+    color: COLORS.success,
+    fontWeight: 'bold',
+  },
+  price: {
+    fontSize: 16,
     fontFamily: FONTS.display.bold,
+    color: COLORS.primary,
+  },
+  addToCartBtn: {
+    backgroundColor: COLORS.primary,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   emptyContainer: {
     flex: 1,

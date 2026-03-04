@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { SecureStorageAdapter } from '../utils/SecureStorageAdapter';
 import { User, SavedAddress } from '../types';
+import NotificationService from '../services/NotificationService';
 
 interface UserState {
   user: User | null;
@@ -30,11 +31,14 @@ export const useUserStore = create<UserState>()(
         isAuthenticated: true
       })),
 
-      logout: () => set({
-        user: null,
-        token: null,
-        isAuthenticated: false
-      }),
+      logout: () => {
+        NotificationService.removeTokenFromBackend().catch(() => {});
+        set({
+          user: null,
+          token: null,
+          isAuthenticated: false,
+        });
+      },
 
       updateUser: (updatedUser) => set((state) => ({
         user: state.user ? { ...state.user, ...updatedUser } : null

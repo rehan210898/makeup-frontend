@@ -35,7 +35,11 @@ export default function CheckoutScreen() {
     : allItems;
 
   const localSubtotal = buyNowItem
-    ? items.reduce((sum, i) => sum + parseFloat(i.product.price || '0') * i.quantity, 0)
+    ? items.reduce((sum, i) => {
+        const price = parseFloat(i.variation?.price || i.product.price || '0');
+        const stitchingCost = i.isStitched ? 35 : 0;
+        return sum + (price + stitchingCost) * i.quantity;
+      }, 0)
     : fullSubtotal;
   const { user, token } = useUserStore();
   const [loading, setLoading] = useState(false);

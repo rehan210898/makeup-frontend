@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as Notifications from 'expo-notifications';
 import * as Linking from 'expo-linking';
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import NotificationService from '../services/NotificationService';
 import { navigate } from '../navigation/navigationRef';
 
@@ -30,7 +30,7 @@ export const useNotifications = () => {
 
     // Priority 1: Direct deep link URL
     if (data.click_action) {
-      Linking.openURL(data.click_action);
+      try { Linking.openURL(data.click_action); } catch (e) { console.error('Failed to open deep link:', e); }
       return;
     }
 
@@ -61,7 +61,7 @@ export const useNotifications = () => {
     // Priority 3: Typed notification payloads (order updates, promotions)
     try {
       if (data.type === 'PROMOTION' && data.link) {
-        Linking.openURL(Linking.createURL(data.link));
+        try { Linking.openURL(Linking.createURL(data.link)); } catch (e) { console.error('Failed to open promotion link:', e); }
       } else if (data.type === 'ORDER_UPDATE' || data.type === 'ORDER_CONFIRMATION') {
         if (data.orderId) {
           navigate('OrderTracking', { orderId: data.orderId });
@@ -76,7 +76,7 @@ export const useNotifications = () => {
 
   useEffect(() => {
     // Skip push registration in Expo Go (tokens won't work for real push)
-    const isExpoGo = Constants.appOwnership === 'expo';
+    const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
     if (isExpoGo) {
       console.log('Running in Expo Go - push notifications limited to local only');
     }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { COLORS } from '../../constants';
+import { FONTS } from '../../constants/fonts';
 import { Attribute, ProductVariation } from '../../types';
 
 interface VariationSelectorProps {
@@ -16,14 +17,15 @@ export default function VariationSelector({
   selectedAttributes,
   onAttributeSelect,
 }: VariationSelectorProps) {
-  if (!attributes || attributes.length === 0) {
+  const variationAttributes = attributes.filter(attr => attr.variation);
+
+  if (!variationAttributes || variationAttributes.length === 0) {
     return null;
   }
 
   const isOptionAvailable = (attributeName: string, option: string): boolean => {
-    // Check if this option combination is available in variations
     const testSelection = { ...selectedAttributes, [attributeName]: option };
-    
+
     return variations.some(variation => {
       return variation.attributes.every(attr => {
         const selectedValue = testSelection[attr.name];
@@ -34,42 +36,37 @@ export default function VariationSelector({
 
   return (
     <View style={styles.container}>
-      {attributes.map((attribute) => (
-        <View key={attribute.id} style={styles.attributeContainer}>
-          <Text style={styles.attributeLabel}>{attribute.name}:</Text>
-          
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={styles.optionsScroll}
-          >
+      {variationAttributes.map((attribute) => (
+        <View key={attribute.id} style={styles.attributeBlock}>
+          <Text style={styles.attributeLabel}>
+            {attribute.name}
+            {selectedAttributes[attribute.name] && (
+              <Text style={styles.selectedValue}> : {selectedAttributes[attribute.name]}</Text>
+            )}
+          </Text>
+
+          <View style={styles.optionsWrap}>
             {attribute.options.map((option) => {
               const isSelected = selectedAttributes[attribute.name] === option;
               const isAvailable = isOptionAvailable(attribute.name, option);
-              
+
               return (
                 <TouchableOpacity
                   key={option}
                   style={[
-                    styles.optionButton,
-                    isSelected && styles.optionButtonSelected,
-                    !isAvailable && styles.optionButtonDisabled,
-                    { 
-                      backgroundColor: isSelected 
-                        ? COLORS.accent 
-                        : isAvailable 
-                        ? COLORS.white 
-                        : COLORS.gray[200] 
-                    },
+                    styles.chip,
+                    isSelected && styles.chipSelected,
+                    !isAvailable && styles.chipDisabled,
                   ]}
                   onPress={() => isAvailable && onAttributeSelect(attribute.name, option)}
                   disabled={!isAvailable}
+                  activeOpacity={0.7}
                 >
-                  <Text 
+                  <Text
                     style={[
-                      styles.optionText,
-                      isSelected && styles.optionTextSelected,
-                      !isAvailable && styles.optionTextDisabled,
+                      styles.chipText,
+                      isSelected && styles.chipTextSelected,
+                      !isAvailable && styles.chipTextDisabled,
                     ]}
                   >
                     {option}
@@ -77,74 +74,65 @@ export default function VariationSelector({
                 </TouchableOpacity>
               );
             })}
-          </ScrollView>
+          </View>
         </View>
       ))}
-      
-      {Object.keys(selectedAttributes).length > 0 && (
-        <View style={[styles.selectionSummary, { backgroundColor: COLORS.accentLight }]}>
-          <Text style={styles.selectionText}>
-            Selected: {Object.entries(selectedAttributes).map(([key, value]) => `${key}: ${value}`).join(', ')}
-          </Text>
-        </View>
-      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 15,
+    gap: 16,
   },
-  attributeContainer: {
-    marginBottom: 20,
+  attributeBlock: {
+    gap: 10,
   },
   attributeLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.primary,
-    marginBottom: 10,
+    fontSize: 13,
+    fontFamily: FONTS.display.semiBold,
+    color: COLORS.text.main,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  optionsScroll: {
+  selectedValue: {
+    fontFamily: FONTS.display.medium,
+    color: COLORS.primary,
+    textTransform: 'none',
+    letterSpacing: 0,
+  },
+  optionsWrap: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
-  optionButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: COLORS.gray[300],
-    minWidth: 80,
-    alignItems: 'center',
+  chip: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 25,
+    borderWidth: 1.5,
+    borderColor: '#E8E8E8',
+    backgroundColor: COLORS.white,
   },
-  optionButtonSelected: {
+  chipSelected: {
     borderColor: COLORS.primary,
-    borderWidth: 2,
+    backgroundColor: COLORS.primary,
   },
-  optionButtonDisabled: {
-    opacity: 0.5,
+  chipDisabled: {
+    opacity: 0.35,
+    backgroundColor: '#F5F5F5',
   },
-  optionText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: COLORS.primary,
+  chipText: {
+    fontSize: 13,
+    fontFamily: FONTS.display.medium,
+    color: COLORS.text.main,
   },
-  optionTextSelected: {
-    fontWeight: 'bold',
+  chipTextSelected: {
+    color: COLORS.white,
+    fontFamily: FONTS.display.bold,
   },
-  optionTextDisabled: {
-    color: COLORS.gray[400],
+  chipTextDisabled: {
+    color: COLORS.text.muted,
     textDecorationLine: 'line-through',
-  },
-  selectionSummary: {
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 10,
-  },
-  selectionText: {
-    fontSize: 14,
-    color: COLORS.primary,
-    fontWeight: '500',
   },
 });
