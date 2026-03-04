@@ -99,7 +99,7 @@ export default function ProductDetailScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const flatListRef = useRef<FlatList>(null);
   const loadingRef = useRef(false);
-  const { addItem, getItemQuantity, itemCount } = useCartStore();
+  const { addItem, getItemQuantity, updateQuantity, itemCount } = useCartStore();
   const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlistStore();
 
   const toggleWishlist = (item: Product | null = product) => {
@@ -405,7 +405,7 @@ export default function ProductDetailScreen() {
 
   const handleBuyNow = () => {
     if (!product) return;
-    
+
     if (product.type === 'variable' && !selectedVariation) {
       Toast.show({
         type: 'error',
@@ -417,7 +417,14 @@ export default function ProductDetailScreen() {
 
     const success = addItem(product, 1, selectedVariation?.id, selectedAttributes, isStitched);
     if (success) {
-       navigation.navigate('Checkout');
+       navigation.navigate('Checkout', {
+         buyNowItem: {
+           productId: product.id,
+           variationId: selectedVariation?.id,
+           quantity: 1,
+           isStitched,
+         },
+       });
     }
   };
 
@@ -872,6 +879,25 @@ export default function ProductDetailScreen() {
         </View>
         
         <View style={styles.actionButtons}>
+          {isInStock && cartQuantity > 0 ? (
+            <View style={styles.quantityControl}>
+              <TouchableOpacity
+                style={styles.quantityBtn}
+                onPress={() => updateQuantity(product!.id, cartQuantity - 1, selectedVariation?.id, isStitched)}
+              >
+                <Text style={styles.quantityBtnText}>−</Text>
+              </TouchableOpacity>
+              <Text style={styles.quantityValue}>{cartQuantity}</Text>
+              <TouchableOpacity
+                style={[styles.quantityBtn, hasReachedLimit && styles.quantityBtnDisabled]}
+                onPress={() => !hasReachedLimit && updateQuantity(product!.id, cartQuantity + 1, selectedVariation?.id, isStitched)}
+                disabled={hasReachedLimit}
+              >
+                <Text style={[styles.quantityBtnText, hasReachedLimit && styles.quantityBtnTextDisabled]}>+</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
           <TouchableOpacity
             style={[
               styles.buyNowBtn,
@@ -1511,19 +1537,51 @@ const styles = StyleSheet.create({
   },
   actionButtons: {
     flexDirection: 'row',
-    gap: 12,
-    flex: 1.5, 
-    justifyContent: 'flex-end',
+    gap: 8,
+    alignItems: 'center',
+  },
+  quantityControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
+  quantityBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: COLORS.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quantityBtnDisabled: {
+    backgroundColor: '#F5F5F5',
+  },
+  quantityBtnText: {
+    fontSize: 18,
+    fontFamily: FONTS.display.bold,
+    color: COLORS.primary,
+  },
+  quantityBtnTextDisabled: {
+    color: '#ccc',
+  },
+  quantityValue: {
+    minWidth: 28,
+    textAlign: 'center',
+    fontSize: 15,
+    fontFamily: FONTS.display.bold,
+    color: COLORS.primary,
   },
   buyNowBtn: {
-    backgroundColor: COLORS.black, // Modern Black
+    backgroundColor: COLORS.black,
     borderWidth: 0,
     paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12, // More rounded
+    paddingHorizontal: 16,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 0.8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,

@@ -98,7 +98,7 @@ const ProductGridSectionComponent: React.FC<ProductGridSectionProps> = ({ title,
 
   const renderSkeletonItem = useCallback(() => (
     <View style={{ width: itemWidth, marginBottom: GAP, marginRight: GAP }}>
-      <ProductCardSkeleton />
+      <ProductCardSkeleton variant="image_only" />
     </View>
   ), [itemWidth]);
 

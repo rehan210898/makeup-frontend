@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, Modal, FlatList, RefreshControl } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { COLORS } from '../../constants';
+import { RootStackParamList } from '../../navigation/types';
 import { useCartStore } from '../../store/cartStore';
 import { useUserStore } from '../../store/userStore';
 import axios from 'axios';
@@ -20,7 +21,22 @@ import { useAddressAutoUpdate } from '../../hooks/useAddressAutoUpdate';
 
 export default function CheckoutScreen() {
   const navigation = useNavigation();
-  const { items, subtotal: localSubtotal, clearCart } = useCartStore();
+  const route = useRoute<RouteProp<RootStackParamList, 'Checkout'>>();
+  const buyNowItem = route.params?.buyNowItem;
+  const { items: allItems, subtotal: fullSubtotal, clearCart, removeItem } = useCartStore();
+
+  // Filter to only the buy-now item when coming from Buy Now
+  const items = buyNowItem
+    ? allItems.filter(i =>
+        i.product_id === buyNowItem.productId &&
+        i.variation_id === buyNowItem.variationId &&
+        (i.isStitched ?? false) === (buyNowItem.isStitched ?? false)
+      )
+    : allItems;
+
+  const localSubtotal = buyNowItem
+    ? items.reduce((sum, i) => sum + parseFloat(i.product.price || '0') * i.quantity, 0)
+    : fullSubtotal;
   const { user, token } = useUserStore();
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'card'>('card');
@@ -61,6 +77,14 @@ export default function CheckoutScreen() {
       couponFees, // Negative fees for discounts
       getCodFeeAmount
   } = useCheckoutCalculations(serverCart, localSubtotal, shippingRates, paymentMethod);
+
+  const handleOrderSuccess = () => {
+    if (buyNowItem) {
+      removeItem(buyNowItem.productId, buyNowItem.variationId, buyNowItem.isStitched);
+    } else {
+      clearCart();
+    }
+  };
 
   const [couponCode, setCouponCode] = useState('');
   const [showCouponModal, setShowCouponModal] = useState(false);
@@ -213,7 +237,7 @@ export default function CheckoutScreen() {
             fee_lines: couponFees
         }, {
             onSuccess: (data: any) => {
-                clearCart();
+                handleOrderSuccess();
                 Alert.alert(
                     'Success', 
                     `Order #${data.orderId} placed successfully!`, 

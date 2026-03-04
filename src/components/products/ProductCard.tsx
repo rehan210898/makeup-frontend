@@ -18,12 +18,6 @@ interface ProductCardProps {
   index?: number; // Used for pastel background color rotation
 }
 
-// Step 21: Rewrite WC image URLs to use WordPress thumbnail sizes
-const getThumbnailUrl = (url: string | undefined): string | undefined => {
-  if (!url) return url;
-  // Match WC media URLs ending with .jpg/.jpeg/.png/.webp and insert -300x300 before extension
-  return url.replace(/(\.\w{3,4})$/, '-300x300$1');
-};
 
 // Get pastel background color based on index or product id
 const getPastelColor = (index: number, productId: number): string => {
@@ -65,7 +59,7 @@ const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false, hid
         isImageOnly && styles.imageOnlyImageContainer
       ]}>
         <Image
-          source={{ uri: getThumbnailUrl(item.images?.[0]?.src) }}
+          source={{ uri: item.images?.[0]?.src || item.image || item.thumbnail || undefined }}
           style={[styles.image, isImageOnly && styles.imageOnlyImage]}
           contentFit="cover"
           contentPosition="center"

@@ -4,48 +4,51 @@ import { Skeleton } from '../common/Skeleton';
 import { COLORS } from '../../constants';
 
 interface ProductCardSkeletonProps {
-  variant?: 'default' | 'compact';
+  variant?: 'default' | 'compact' | 'image_only';
 }
 
 export const ProductCardSkeleton: React.FC<ProductCardSkeletonProps> = ({ variant = 'default' }) => {
   const isCompact = variant === 'compact';
+  const isImageOnly = variant === 'image_only';
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isImageOnly && styles.imageOnlyContainer]}>
       {/* Image - matches ProductCard's aspectRatio: 1 with 12px padding */}
-      <View style={styles.imageContainer}>
-        <Skeleton width="100%" height="100%" borderRadius={8} />
+      <View style={[styles.imageContainer, isImageOnly && styles.imageOnlyImageContainer]}>
+        <Skeleton width="100%" height="100%" borderRadius={isImageOnly ? 12 : 8} />
       </View>
 
       {/* Details - matches ProductCard details section */}
-      <View style={[styles.details, isCompact && styles.compactDetails]}>
-        {/* Name - 2 lines */}
-        <Skeleton
-          width="90%"
-          height={isCompact ? 11 : 13}
-          borderRadius={4}
-          style={{ marginBottom: 4 }}
-        />
-        <Skeleton
-          width="60%"
-          height={isCompact ? 11 : 13}
-          borderRadius={4}
-          style={{ marginBottom: isCompact ? 6 : 8 }}
-        />
+      {!isImageOnly && (
+        <View style={[styles.details, isCompact && styles.compactDetails]}>
+          {/* Name - 2 lines */}
+          <Skeleton
+            width="90%"
+            height={isCompact ? 11 : 13}
+            borderRadius={4}
+            style={{ marginBottom: 4 }}
+          />
+          <Skeleton
+            width="60%"
+            height={isCompact ? 11 : 13}
+            borderRadius={4}
+            style={{ marginBottom: isCompact ? 6 : 8 }}
+          />
 
-        {/* Price */}
-        <Skeleton
-          width="40%"
-          height={isCompact ? 13 : 16}
-          borderRadius={4}
-          style={{ marginBottom: 4 }}
-        />
-        {/* Original price + discount */}
-        <View style={styles.priceRow}>
-          <Skeleton width="25%" height={12} borderRadius={4} />
-          <Skeleton width="20%" height={12} borderRadius={4} style={{ marginLeft: 6 }} />
+          {/* Price */}
+          <Skeleton
+            width="40%"
+            height={isCompact ? 13 : 16}
+            borderRadius={4}
+            style={{ marginBottom: 4 }}
+          />
+          {/* Original price + discount */}
+          <View style={styles.priceRow}>
+            <Skeleton width="25%" height={12} borderRadius={4} />
+            <Skeleton width="20%" height={12} borderRadius={4} style={{ marginLeft: 6 }} />
+          </View>
         </View>
-      </View>
+      )}
     </View>
   );
 };
@@ -76,5 +79,15 @@ const styles = StyleSheet.create({
   priceRow: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  imageOnlyContainer: {
+    borderWidth: 0,
+    borderRadius: 12,
+    backgroundColor: 'transparent',
+  },
+  imageOnlyImageContainer: {
+    padding: 0,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
 });

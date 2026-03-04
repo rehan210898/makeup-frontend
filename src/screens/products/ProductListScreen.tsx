@@ -330,15 +330,6 @@ export default function ProductListScreen() {
     );
   };
     
-  const getItemLayout = useCallback(
-    (data: any, index: number) => ({
-      length: PRODUCT_ITEM_HEIGHT,
-      offset: PRODUCT_ITEM_HEIGHT * index,
-      index,
-    }),
-    []
-  );
-
   return (
     <View style={styles.container}>
       <View style={styles.stickyHeader}>
@@ -460,7 +451,7 @@ export default function ProductListScreen() {
         <Animated.FlatList
           ref={flatListRef}
           data={products}
-          extraData={wishlistItems}
+          extraData={wishlistItemIds}
           renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}
           numColumns={2}
@@ -481,7 +472,6 @@ export default function ProductListScreen() {
           windowSize={21}
           initialNumToRender={10}
           removeClippedSubviews={false}
-          getItemLayout={getItemLayout}
           ListFooterComponent={loadingMore ? <ActivityIndicator color={COLORS.primary} /> : null}
           ListEmptyComponent={
             <View style={styles.center}>

@@ -136,13 +136,15 @@ const ProductSliderSectionComponent: React.FC<ProductSliderSectionProps> = ({
     [wishlistItemIds, products, addItem, removeItem]
   );
 
+  const skeletonVariant = cardStyle === 'image_only' ? 'image_only' : (isCompactSlider ? 'compact' : 'default');
+
   const renderSkeletonItem = useCallback(
     () => (
       <View style={{ width: CARD_WIDTH, marginRight: GAP }}>
-        <ProductCardSkeleton variant={isCompactSlider ? 'compact' : 'default'} />
+        <ProductCardSkeleton variant={skeletonVariant} />
       </View>
     ),
-    [CARD_WIDTH, isCompactSlider]
+    [CARD_WIDTH, skeletonVariant]
   );
 
   const renderProductItem = useCallback(

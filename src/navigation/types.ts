@@ -14,7 +14,7 @@ export type RootStackParamList = {
   MainTabs: NavigatorScreenParams<BottomTabParamList>;
   ProductDetail: { productId: number };
   ProductList: { categoryId?: number; categoryName?: string; search?: string; attribute?: string; termId?: number; title?: string };
-  Checkout: undefined;
+  Checkout: { buyNowItem?: { productId: number; variationId?: number; quantity: number; isStitched?: boolean } } | undefined;
   OrderConfirmation: { orderId: number };
   OrderTracking: { orderId: number; fromCheckout?: boolean };
   Refund: { orderId: number };
