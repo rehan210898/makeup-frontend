@@ -75,13 +75,15 @@ export const useNotifications = () => {
   }, []);
 
   useEffect(() => {
-    // Skip push registration in Expo Go (tokens won't work for real push)
+    // Skip push token registration entirely in Expo Go
+    // Expo Go tokens route through the Expo Go app, not our standalone app
     const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
     if (isExpoGo) {
-      console.log('Running in Expo Go - push notifications limited to local only');
+      console.log('Expo Go detected - skipping push notification registration');
+      return;
     }
 
-    // Register for push notifications
+    // Register for push notifications (standalone/dev builds only)
     NotificationService.registerForPushNotificationsAsync().then(token => {
       setExpoPushToken(token);
       if (token) {
