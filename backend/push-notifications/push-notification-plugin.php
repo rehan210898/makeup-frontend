@@ -119,11 +119,21 @@ function muo_push_admin_page() {
                     esc_html($send_result['error'])
                 );
             } else {
+                $notice_type = $send_result['failed'] > 0 && $send_result['sent'] === 0 ? 'notice-warning' : 'notice-success';
+                $error_details = '';
+                if (!empty($send_result['errors'])) {
+                    $error_details = '<br><strong>Error details:</strong> <code>' . esc_html(wp_json_encode($send_result['errors'])) . '</code>';
+                }
+                if (!empty($send_result['tokens_used'])) {
+                    $error_details .= '<br><strong>Tokens:</strong> <code>' . esc_html(wp_json_encode($send_result['tokens_used'])) . '</code>';
+                }
                 $result_message = sprintf(
-                    '<div class="notice notice-success"><p>Notification sent! Delivered: %d, Failed: %d, Total targeted: %d</p></div>',
+                    '<div class="notice %s"><p>Notification sent! Delivered: %d, Failed: %d, Total targeted: %d%s</p></div>',
+                    $notice_type,
                     $send_result['sent'],
                     $send_result['failed'],
-                    $send_result['total_targeted']
+                    $send_result['total_targeted'],
+                    $error_details
                 );
 
                 // Save to history
@@ -392,6 +402,8 @@ function muo_push_send_via_bff($title, $body, $data = [], $image = '') {
         'sent'           => isset($body_response['sent']) ? (int)$body_response['sent'] : 0,
         'failed'         => isset($body_response['failed']) ? (int)$body_response['failed'] : 0,
         'total_targeted' => isset($body_response['total_targeted']) ? (int)$body_response['total_targeted'] : 0,
+        'errors'         => isset($body_response['errors']) ? $body_response['errors'] : null,
+        'tokens_used'    => isset($body_response['tokens_used']) ? $body_response['tokens_used'] : null,
     ];
 }
 
