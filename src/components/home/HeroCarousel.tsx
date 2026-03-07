@@ -95,11 +95,11 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
         contentFit="cover"
         transition={300}
       />
-      <LinearGradient
+      {/* <LinearGradient
         colors={['transparent', 'rgba(0, 0, 0, 0.7)', 'rgba(0, 0, 0, 0.85)']}
         locations={[0.3, 0.7, 1]}
         style={styles.gradient}
-      />
+      /> */}
       <View style={styles.slideContent}>
         {item.badge && (
           <View
