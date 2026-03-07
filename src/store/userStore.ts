@@ -25,11 +25,18 @@ export const useUserStore = create<UserState>()(
       isAuthenticated: false,
       _hasHydrated: false,
 
-      setUser: (user, token) => set((state) => ({
-        user: { ...user, savedAddresses: state.user?.savedAddresses || [] },
-        token,
-        isAuthenticated: true
-      })),
+      setUser: (user, token) => {
+        set((state) => ({
+          user: { ...user, savedAddresses: state.user?.savedAddresses || [] },
+          token,
+          isAuthenticated: true
+        }));
+        // Re-register push token with backend so it gets linked to this user's ID
+        const pushToken = NotificationService.getRegisteredToken();
+        if (pushToken) {
+          NotificationService.registerTokenWithBackend(pushToken);
+        }
+      },
 
       logout: () => {
         NotificationService.removeTokenFromBackend().catch(() => {});
