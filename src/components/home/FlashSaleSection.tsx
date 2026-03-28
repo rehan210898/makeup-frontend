@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { COLORS } from '../../constants';
@@ -10,6 +11,10 @@ import ProductCard from '../products/ProductCard';
 import { useWishlistStore } from '../../store/wishlistStore';
 import { ProductCardSkeleton } from '../skeletons/ProductCardSkeleton';
 import { Skeleton } from '../common/Skeleton';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CARD_WIDTH = SCREEN_WIDTH / 2.5;
+const GAP = 10;
 
 interface FlashSaleSectionProps {
   title?: string;
@@ -101,18 +106,24 @@ export const FlashSaleSection: React.FC<FlashSaleSectionProps> = ({
   const renderItem = useCallback(({ item, index }: { item: Product; index: number }) => {
     const isWishlisted = wishlistItemIds.includes(item.id);
     return (
-      <View style={{ width: 150 }}>
+      <View style={{ width: CARD_WIDTH, marginRight: GAP }}>
         <ProductCard
           item={item}
           onPress={handleProductPress}
           onWishlistPress={toggleWishlist}
           isWishlisted={isWishlisted}
-          variant="default"
+          variant="compact"
           index={index}
         />
       </View>
     );
   }, [handleProductPress, toggleWishlist, wishlistItemIds]);
+
+  const renderSkeletonItem = useCallback(() => (
+    <View style={{ width: CARD_WIDTH, marginRight: GAP }}>
+      <ProductCardSkeleton variant="compact" />
+    </View>
+  ), []);
 
   if (isLoading) {
     return (
@@ -121,19 +132,17 @@ export const FlashSaleSection: React.FC<FlashSaleSectionProps> = ({
           <Skeleton width={120} height={24} borderRadius={4} />
           <Skeleton width={100} height={24} borderRadius={6} />
         </View>
-        <FlatList
-          data={[1, 2, 3, 4]}
-          keyExtractor={(item) => item.toString()}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
-          ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
-          renderItem={() => (
-            <View style={{ width: 150 }}>
-              <ProductCardSkeleton />
-            </View>
-          )}
-        />
+        <View>
+          <FlashList
+            horizontal
+            data={[1, 2, 3]}
+            keyExtractor={(item) => item.toString()}
+            renderItem={renderSkeletonItem}
+            contentContainerStyle={styles.listContent}
+            showsHorizontalScrollIndicator={false}
+            estimatedItemSize={CARD_WIDTH + GAP}
+          />
+        </View>
       </View>
     );
   }
@@ -154,15 +163,20 @@ export const FlashSaleSection: React.FC<FlashSaleSectionProps> = ({
         </View>
         <CountdownTimer endTime={endTime || defaultEndTime.toISOString()} />
       </View>
-      <FlatList
-        data={products}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id.toString()}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
-        ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
-      />
+      <View>
+        <FlashList
+          horizontal
+          data={products}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={styles.listContent}
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={CARD_WIDTH + GAP}
+          decelerationRate="fast"
+          snapToAlignment="start"
+          estimatedItemSize={CARD_WIDTH + GAP}
+        />
+      </View>
     </View>
   );
 };
@@ -218,7 +232,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 10,
   },
 });
 

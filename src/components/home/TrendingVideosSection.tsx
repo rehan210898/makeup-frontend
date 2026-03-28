@@ -1,7 +1,9 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Dimensions, Linking } from 'react-native';
+import React, { useRef, useState, useCallback, useEffect, memo } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ViewToken, AppState, Dimensions } from 'react-native';
+import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useIsFocused } from '@react-navigation/native';
 import { COLORS } from '../../constants';
 import { FONTS } from '../../constants/fonts';
 
@@ -18,86 +20,188 @@ interface VideoItem {
 interface TrendingVideosSectionProps {
   title?: string;
   videos: VideoItem[];
-  onVideoPress?: (video: VideoItem) => void;
 }
 
-const PlayIcon: React.FC<{ size?: number }> = ({ size = 40 }) => (
-  <View style={[styles.playIcon, { width: size, height: size, borderRadius: size / 2 }]}>
-    <View
-      style={[
-        styles.playTriangle,
-        {
-          borderLeftWidth: size * 0.35,
-          borderTopWidth: size * 0.2,
-          borderBottomWidth: size * 0.2,
-        },
-      ]}
-    />
+const MuteIcon: React.FC = () => (
+  <View style={styles.muteIcon}>
+    <View style={styles.muteBar} />
+    <View style={[styles.muteBar, { height: 8 }]} />
+    <View style={[styles.muteBar, { height: 12 }]} />
   </View>
 );
 
-const VolumeIcon: React.FC = () => (
-  <View style={styles.volumeIcon}>
-    <View style={styles.volumeBar} />
-    <View style={[styles.volumeBar, { height: 8 }]} />
-    <View style={[styles.volumeBar, { height: 12 }]} />
+const UnmuteIcon: React.FC = () => (
+  <View style={styles.muteIcon}>
+    <View style={[styles.muteBar, { height: 4, opacity: 0.4 }]} />
+    <View style={[styles.muteBar, { height: 4, opacity: 0.4 }]} />
+    <View style={[styles.muteBar, { height: 4, opacity: 0.4 }]} />
   </View>
 );
 
-export const TrendingVideosSection: React.FC<TrendingVideosSectionProps> = ({
-  title = 'Trending Now',
-  videos,
-  onVideoPress,
-}) => {
-  const handlePress = (video: VideoItem) => {
-    if (video.videoUrl) {
-      Linking.openURL(video.videoUrl).catch(err => console.error("Couldn't load video", err));
-    } else if (onVideoPress) {
-      onVideoPress(video);
+interface VideoCardProps {
+  item: VideoItem;
+  isVisible: boolean;
+  sectionActive: boolean;
+}
+
+const VideoCard = memo(({ item, isVisible, sectionActive }: VideoCardProps) => {
+  const videoRef = useRef<Video>(null);
+  const [isMuted, setIsMuted] = useState(true);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  // Video plays only when: card visible in horizontal list + section on screen + app in foreground
+  const shouldPlay = isVisible && sectionActive;
+
+  const onPlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
+    if (status.isLoaded) {
+      if (!isLoaded) setIsLoaded(true);
     }
-  };
+  }, [isLoaded]);
 
-  const renderItem = ({ item }: { item: VideoItem }) => (
-    <TouchableOpacity
-      style={styles.videoCard}
-      onPress={() => handlePress(item)}
-      activeOpacity={0.9}
-    >
+  // Stop and reset video position when section goes off screen
+  useEffect(() => {
+    if (!sectionActive && videoRef.current && isLoaded) {
+      videoRef.current.stopAsync().catch(() => {});
+    }
+  }, [sectionActive, isLoaded]);
+
+  const toggleMute = useCallback(() => {
+    setIsMuted(prev => !prev);
+  }, []);
+
+  const hasVideo = !!item.videoUrl && !hasError;
+
+  return (
+    <View style={styles.videoCard}>
+      {/* Thumbnail — always rendered as base layer, shown when video not playing */}
       <Image
         source={{ uri: item.imageUrl }}
-        style={styles.videoImage}
+        style={[styles.videoImage, hasVideo && isLoaded && shouldPlay && styles.hidden]}
         contentFit="cover"
-        transition={300}
+        transition={200}
+        cachePolicy="memory-disk"
+        recyclingKey={`video-thumb-${item.id}`}
       />
+
+      {/* Video player */}
+      {hasVideo && (
+        <Video
+          ref={videoRef}
+          source={{ uri: item.videoUrl! }}
+          style={styles.videoPlayer}
+          resizeMode={ResizeMode.COVER}
+          shouldPlay={shouldPlay}
+          isLooping
+          isMuted={isMuted}
+          onPlaybackStatusUpdate={onPlaybackStatusUpdate}
+          onError={() => setHasError(true)}
+          posterSource={{ uri: item.imageUrl }}
+          usePoster={true}
+          posterStyle={styles.poster}
+        />
+      )}
+
+      {/* Bottom gradient for title */}
       <LinearGradient
         colors={['transparent', 'rgba(0, 0, 0, 0.4)', 'rgba(0, 0, 0, 0.7)']}
         locations={[0.4, 0.7, 1]}
         style={styles.gradient}
+        pointerEvents="none"
       />
 
-      {/* Play Button */}
-      <View style={styles.playButtonContainer}>
-        <PlayIcon />
-      </View>
-
-      {/* Volume Icon */}
-      <TouchableOpacity style={styles.volumeContainer}>
-        <VolumeIcon />
-      </TouchableOpacity>
+      {/* Mute/Unmute toggle — only when playing */}
+      {hasVideo && isLoaded && shouldPlay && (
+        <TouchableOpacity
+          style={styles.muteContainer}
+          onPress={toggleMute}
+          activeOpacity={0.7}
+        >
+          {isMuted ? <UnmuteIcon /> : <MuteIcon />}
+        </TouchableOpacity>
+      )}
 
       {/* Title */}
-      <View style={styles.titleContainer}>
+      <View style={styles.titleContainer} pointerEvents="none">
         <Text style={styles.videoTitle} numberOfLines={2}>
           {item.title}
         </Text>
       </View>
-    </TouchableOpacity>
+    </View>
+  );
+});
+
+export const TrendingVideosSection: React.FC<TrendingVideosSectionProps> = ({
+  title = 'Trending Now',
+  videos,
+}) => {
+  const [visibleIds, setVisibleIds] = useState<Set<string | number>>(new Set());
+  const [sectionVisible, setSectionVisible] = useState(false);
+  const [appActive, setAppActive] = useState(true);
+  const sectionRef = useRef<View>(null);
+  const isFocused = useIsFocused();
+
+  // Track app foreground/background
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      setAppActive(state === 'active');
+    });
+    return () => sub.remove();
+  }, []);
+
+  // Track section visibility on screen using onLayout + measure
+  const checkVisibility = useCallback(() => {
+    if (!sectionRef.current) return;
+    sectionRef.current.measure((_x, _y, _w, height, _px, pageY) => {
+      // Section is visible if any part is within the viewport
+      const screenHeight = Dimensions.get('window').height;
+      const isOnScreen = pageY + height > 0 && pageY < screenHeight;
+      setSectionVisible(isOnScreen);
+    });
+  }, []);
+
+  // Poll visibility — runs only when screen is focused
+  useEffect(() => {
+    if (!isFocused) {
+      setSectionVisible(false);
+      return;
+    }
+    // Check immediately
+    checkVisibility();
+    // Check periodically (every 500ms is enough, low overhead)
+    const interval = setInterval(checkVisibility, 500);
+    return () => clearInterval(interval);
+  }, [isFocused, checkVisibility]);
+
+  const sectionActive = sectionVisible && appActive && isFocused;
+
+  const onViewableItemsChanged = useCallback(
+    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+      const ids = new Set<string | number>(
+        viewableItems
+          .filter(v => v.isViewable && v.item)
+          .map(v => v.item.id)
+      );
+      setVisibleIds(ids);
+    },
+    []
+  );
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 60,
+  }).current;
+
+  const renderItem = useCallback(
+    ({ item }: { item: VideoItem }) => (
+      <VideoCard item={item} isVisible={visibleIds.has(item.id)} sectionActive={sectionActive} />
+    ),
+    [visibleIds, sectionActive]
   );
 
   if (!videos || videos.length === 0) return null;
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} ref={sectionRef}>
       <View style={styles.header}>
         <Text style={styles.sectionTitle}>{title}</Text>
       </View>
@@ -109,6 +213,8 @@ export const TrendingVideosSection: React.FC<TrendingVideosSectionProps> = ({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
         ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
       />
     </View>
   );
@@ -139,49 +245,43 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.gray[200],
   },
   videoImage: {
+    ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
+  },
+  hidden: {
+    opacity: 0,
+  },
+  videoPlayer: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  poster: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
   gradient: {
     ...StyleSheet.absoluteFillObject,
   },
-  playButtonContainer: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: [{ translateX: -20 }, { translateY: -20 }],
-  },
-  playIcon: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  playTriangle: {
-    width: 0,
-    height: 0,
-    borderStyle: 'solid',
-    borderTopColor: 'transparent',
-    borderBottomColor: 'transparent',
-    borderLeftColor: COLORS.primary,
-    marginLeft: 4,
-  },
-  volumeContainer: {
+  muteContainer: {
     position: 'absolute',
     bottom: 50,
     right: 12,
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  volumeIcon: {
+  muteIcon: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 2,
   },
-  volumeBar: {
+  muteBar: {
     width: 3,
     height: 6,
     backgroundColor: COLORS.white,

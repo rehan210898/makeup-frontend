@@ -323,7 +323,8 @@ const styles = StyleSheet.create({
     padding: 0,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: COLORS.white, // Or keep pastel if desired, but usually image only means full bleed
+    backgroundColor: COLORS.white,
+    aspectRatio: 0.85,
   },
   imageOnlyImage: {
     borderRadius: 12,

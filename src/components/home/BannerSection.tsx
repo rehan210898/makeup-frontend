@@ -46,7 +46,10 @@ export const BannerSection: React.FC<BannerSectionProps> = ({ imageUrl, action }
           source={{ uri: imageUrl }}
           style={styles.image}
           contentFit="cover"
-          transition={300}
+          transition={200}
+          cachePolicy="memory-disk"
+          placeholder={{ blurhash: 'L5H2EC=PM+yV0g-mq.wG9c010J}I' }}
+          recyclingKey={imageUrl}
         />
       </View>
     </TouchableOpacity>

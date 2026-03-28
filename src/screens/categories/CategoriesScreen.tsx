@@ -1,23 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, TextInput } from 'react-native';
+import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { COLORS } from '../../constants';
-import categoryService from '../../services/categoryService';
-import { Category } from '../../types';
 import { RootStackParamList } from '../../navigation/types';
-import { getIconForCategory } from '../../components/icons/CategoryIcons';
 import { useCartStore } from '../../store/cartStore';
 import CartIcon from '../../components/icons/CartIcon';
 import SearchIcon from '../../components/icons/SearchIcon';
 import { FONTS } from '../../constants/fonts';
 import { CategoriesSkeleton } from '../../components/skeletons/CategoriesSkeleton';
+import layoutService, { CategoryLayoutItem } from '../../services/layoutService';
+import { getIconForCategory } from '../../components/icons/CategoryIcons';
 
 type CategoriesScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function CategoriesScreen() {
   const navigation = useNavigation<CategoriesScreenNavigationProp>();
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<CategoryLayoutItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { itemCount } = useCartStore();
@@ -29,11 +29,10 @@ export default function CategoriesScreen() {
   const loadCategories = async () => {
     setLoading(true);
     setError('');
-    
+
     try {
-      const response = await categoryService.getCategories();
-      // console.log('Categories loaded');
-      setCategories(response.data || []);
+      const data = await layoutService.getCategoryLayout();
+      setCategories(data || []);
     } catch (err: any) {
       console.error('Error loading categories:', err);
       setError('Failed to load categories');
@@ -42,25 +41,8 @@ export default function CategoriesScreen() {
     }
   };
 
-  // Helper function to get image URL
-  const getCategoryImageUrl = (category: Category): string | null => {
-    if (!category.image) return null;
-    
-    // If image is a string, return it
-    if (typeof category.image === 'string') {
-      return category.image;
-    }
-    
-    // If image is an object with src property
-    if (typeof category.image === 'object' && 'src' in category.image) {
-      return category.image.src;
-    }
-    
-    return null;
-  };
-
-  const handleCategoryPress = (category: Category) => {
-    navigation.navigate('ProductList', { 
+  const handleCategoryPress = (category: CategoryLayoutItem) => {
+    navigation.navigate('ProductList', {
       categoryId: category.id,
       categoryName: category.name
     });
@@ -68,12 +50,12 @@ export default function CategoriesScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header Matching ProductList/Home Style */}
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.searchContainer}>
             <SearchIcon size={18} color={COLORS.text.muted} />
-            <TextInput 
-                placeholder="Search products..." 
+            <TextInput
+                placeholder="Search products..."
                 placeholderTextColor={COLORS.text.muted}
                 style={styles.searchInput}
                 returnKeyType="search"
@@ -98,7 +80,7 @@ export default function CategoriesScreen() {
 
         {error && (
           <View style={styles.errorBox}>
-            <Text style={styles.errorText}>❌ {error}</Text>
+            <Text style={styles.errorText}>{error}</Text>
             <TouchableOpacity
               style={[styles.retryButton, { backgroundColor: COLORS.primary }]}
               onPress={loadCategories}
@@ -115,44 +97,41 @@ export default function CategoriesScreen() {
         )}
 
        {!loading && !error && categories.length > 0 && (
-  <View style={styles.categoriesGrid}>
-    {categories.filter(c => (c.count || 0) > 0).map((category) => {
-      const imageUrl = getCategoryImageUrl(category);
-      
-      return (
-        <TouchableOpacity
-          key={category.id}
-          style={styles.categoryCard}
-          activeOpacity={0.7}
-          onPress={() => handleCategoryPress(category)}
-        >
-          {/* Category Image - Full width rectangle */}
-          {imageUrl ? (
-            <View style={styles.imageContainer}>
-              <Image
-                source={{ uri: imageUrl }}
-                style={styles.categoryImage}
-                resizeMode="cover"
-                onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
-              />
-            </View>
-          ) : (
-            <View style={styles.categoryIconBox}>
-              {getIconForCategory(category.name, { size: 48, color: COLORS.primary })}
-            </View>
-          )}
-          
-          {/* Category Info Below Image */}
-          <View style={styles.categoryInfo}>
-            <Text style={styles.categoryName} numberOfLines={2}>
-              {category.name}
-            </Text>
+          <View style={styles.categoriesGrid}>
+            {categories.map((category) => (
+              <TouchableOpacity
+                key={category.id}
+                style={styles.categoryCard}
+                activeOpacity={0.7}
+                onPress={() => handleCategoryPress(category)}
+              >
+                {category.image ? (
+                  <View style={styles.imageContainer}>
+                    <Image
+                      source={{ uri: category.image }}
+                      style={styles.categoryImage}
+                      contentFit="cover"
+                      transition={200}
+                      cachePolicy="memory-disk"
+                      placeholder={{ blurhash: 'L5H2EC=PM+yV0g-mq.wG9c010J}I' }}
+                      recyclingKey={`cat-screen-${category.id}`}
+                    />
+                  </View>
+                ) : (
+                  <View style={styles.categoryIconBox}>
+                    {getIconForCategory(category.name, { size: 48, color: COLORS.primary })}
+                  </View>
+                )}
+
+                <View style={styles.categoryInfo}>
+                  <Text style={styles.categoryName} numberOfLines={2}>
+                    {category.name}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
           </View>
-        </TouchableOpacity>
-      );
-    })}
-  </View>
-)}
+        )}
       </ScrollView>
     </View>
   );
@@ -222,11 +201,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 15,
-    paddingBottom: 100, // Fixed padding
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    paddingTop: 60,
+    paddingBottom: 100,
   },
   errorBox: {
     backgroundColor: '#FEE2E2',
@@ -262,8 +237,8 @@ const styles = StyleSheet.create({
     marginHorizontal: -5,
   },
   categoryCard: {
-    width: '31%', // Fits 3 columns
-    margin: '1.15%', 
+    width: '31%',
+    margin: '1.15%',
     borderRadius: 16,
     backgroundColor: COLORS.white,
     shadowColor: '#000',

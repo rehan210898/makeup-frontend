@@ -93,7 +93,10 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
         source={{ uri: item.imageUrl }}
         style={styles.slideImage}
         contentFit="cover"
-        transition={300}
+        transition={200}
+        cachePolicy="memory-disk"
+        placeholder={{ blurhash: 'L5H2EC=PM+yV0g-mq.wG9c010J}I' }}
+        recyclingKey={item.imageUrl}
       />
       {/* <LinearGradient
         colors={['transparent', 'rgba(0, 0, 0, 0.7)', 'rgba(0, 0, 0, 0.85)']}

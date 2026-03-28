@@ -496,20 +496,26 @@ export interface RewardCardData {
 // Union type for all section types
 export type HomeLayoutSectionType =
   | 'hero_banner'
-  | 'section_title'
-  | 'product_list'
-  | 'category_grid'
-  | 'micro_animation'
-  | 'beauty_animation'
-  | 'brand_grid'
   | 'hero_carousel'
-  | 'category_circles'
   | 'promo_banner'
-  | 'flash_sale'
+  | 'category_circles'
+  | 'category_grid'
+  | 'brand_grid'
   | 'trending_videos'
+  | 'flash_sale'
+  | 'reward_card'
+  // 6 product layouts
+  | 'product_slider'
+  | 'product_slider_image'
+  | 'product_grid_2x2'
+  | 'product_grid_2x2_image'
+  | 'product_grid_3x3'
+  | 'product_grid_3x3_image'
+  // Legacy (still supported)
+  | 'product_list'
+  | 'section_title'
   | 'top_rated'
-  | 'editors_choice'
-  | 'reward_card';
+  | 'editors_choice';
 
 export type HomeLayoutSectionData =
   | HeroBannerData

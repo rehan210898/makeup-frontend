@@ -99,6 +99,10 @@ export const CategoryCircleSection: React.FC<CategoryCircleSectionProps> = ({
               }}
               style={styles.image}
               contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+              placeholder={{ blurhash: 'L5H2EC=PM+yV0g-mq.wG9c010J}I' }}
+              recyclingKey={`cat-circle-${item.id}`}
             />
           ) : (
             <View style={styles.placeholder} />

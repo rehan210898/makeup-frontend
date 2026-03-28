@@ -12,27 +12,20 @@ import { RootStackParamList } from '../../navigation/types';
 import layoutService from '../../services/layoutService';
 import { HomeLayoutSection } from '../../types';
 
-// Existing Components
+// Components
 import { BannerSection } from '../../components/home/BannerSection';
 import { ProductSliderSection } from '../../components/home/ProductSliderSection';
 import { ProductGridSection } from '../../components/home/ProductGridSection';
 import { CategoryGridSection } from '../../components/home/CategoryGridSection';
-import { FashionMicroAnimations } from '../../components/home/FashionMicroAnimations';
-import { BeautyMicroAnimations } from '../../components/home/BeautyMicroAnimations';
 import { BrandGridSection } from '../../components/home/BrandGridSection';
-import { FloatingIconsBackground } from '../../components/home/FloatingIconsBackground';
 import { HomeSkeleton } from '../../components/skeletons/HomeSkeleton';
-import { GlassView } from '../../components/common/GlassView';
 
-// New Stitch UI Components
 import { HomeHeader } from '../../components/home/HomeHeader';
 import { HeroCarousel } from '../../components/home/HeroCarousel';
 import { CategoryCircleSection } from '../../components/home/CategoryCircleSection';
 import { PromoBanner } from '../../components/home/PromoBanner';
 import { FlashSaleSection } from '../../components/home/FlashSaleSection';
 import { TrendingVideosSection } from '../../components/home/TrendingVideosSection';
-import { TopRatedSection } from '../../components/home/TopRatedSection';
-import { EditorsChoiceSection } from '../../components/home/EditorsChoiceSection';
 import { RewardProgramCard } from '../../components/home/RewardProgramCard';
 import { ScrollToTopButton } from '../../components/common/ScrollToTopButton';
 
@@ -77,16 +70,13 @@ export default function HomeScreen() {
 
   useEffect(() => {
     const init = async () => {
-      // Step 23: Only use cache if valid (< 10 min old)
       if (cachedLayout.length > 0 && isCacheValid()) {
         setLayout(cachedLayout);
         setLoading(false);
       }
 
-      // Fetch fresh data in background
       const layoutData = await loadLayout();
 
-      // Update cache if successful
       if (layoutData) {
         setHomeData(layoutData, cachedProducts);
       }
@@ -99,20 +89,36 @@ export default function HomeScreen() {
     loadLayout().then(() => setRefreshing(false));
   }, []);
 
+  // Process layout sections into renderable data
   const flatListData = useMemo(() => {
-    const data: any[] = layout.map((section, index) => {
-      let processedSection = { ...section, isSection: true, _key: `section-${index}-${section.type}` };
+    return layout.map((section, index) => {
+      const processed: any = { ...section, isSection: true, _key: `section-${index}-${section.type}` };
+      const d = section.data as any;
 
+      // For all product types, build a simple dataSource
+      if (
+        section.type === 'product_slider' ||
+        section.type === 'product_slider_image' ||
+        section.type === 'product_grid_2x2' ||
+        section.type === 'product_grid_2x2_image' ||
+        section.type === 'product_grid_3x3' ||
+        section.type === 'product_grid_3x3_image'
+      ) {
+        if (d.ids) {
+          processed.dataSource = { type: 'ids', ids: d.ids };
+        }
+      }
+
+      // Legacy support: old "product_list" type
       if (section.type === 'product_list') {
-        const listData = section.data as any;
-        const queryType = listData.query_type;
-        const apiParams = listData.api_params || {};
+        const queryType = d.query_type;
+        const apiParams = d.api_params || {};
 
         let dataSource: any = { type: 'filter', key: 'date' };
 
         if (queryType === 'ids') {
-          if (listData.ids) {
-            dataSource = { type: 'ids', ids: listData.ids };
+          if (d.ids) {
+            dataSource = { type: 'ids', ids: d.ids };
           } else if (apiParams.include) {
             dataSource = { type: 'ids', ids: apiParams.include };
           }
@@ -127,184 +133,228 @@ export default function HomeScreen() {
         } else if (queryType === 'top_rated') {
           dataSource = { type: 'filter', key: 'rating' };
         }
-        (processedSection as any).dataSource = dataSource;
+        processed.dataSource = dataSource;
       }
 
-      return processedSection;
+      return processed;
     });
-
-    return data;
   }, [layout]);
-
-  const handleProductPress = (productId: number) => {
-    navigation.navigate('ProductDetail', { productId });
-  };
 
   const handleSearchPress = () => {
     navigation.navigate('ProductList', {});
   };
 
   const renderItem = useCallback(({ item }: { item: any }) => {
-    if (item.isSection) {
-      switch (item.type) {
-        // New Stitch UI Components
-        case 'hero_carousel':
-          return (
-            <View style={{ minHeight: 420 }}>
-              <HeroCarousel
-                slides={(item.data as any).slides || []}
-                autoPlayInterval={(item.data as any).autoPlayInterval}
-              />
-            </View>
-          );
+    if (!item.isSection) return null;
+    const d = item.data as any;
 
-        case 'category_circles':
-          return (
-            <CategoryCircleSection
+    switch (item.type) {
+      // ===== BANNER / CAROUSEL =====
+      case 'hero_carousel':
+        return (
+          <View style={{ minHeight: 420 }}>
+            <HeroCarousel
+              slides={d.slides || []}
+              autoPlayInterval={d.autoPlayInterval}
+            />
+          </View>
+        );
+
+      case 'hero_banner':
+        return (
+          <View style={{ minHeight: 200 }}>
+            <BannerSection
+              imageUrl={d.imageUrl || ''}
+              action={d.action}
+            />
+          </View>
+        );
+
+      case 'promo_banner':
+        return (
+          <PromoBanner
+            imageUrl={d.imageUrl}
+            title={d.title}
+            titleAccent={d.titleAccent}
+            description={d.description}
+            ctaText={d.ctaText}
+            action={d.action}
+          />
+        );
+
+      // ===== CATEGORY =====
+      case 'category_circles':
+        return (
+          <CategoryCircleSection
+            title={item.title || 'Categories'}
+            categories={d.ids}
+            images={d.images}
+          />
+        );
+
+      case 'category_grid':
+        return (
+          <View style={{ minHeight: 140 }}>
+            <CategoryGridSection
               title={item.title || 'Categories'}
-              categories={(item.data as any).ids}
-              images={(item.data as any).images}
+              categories={d.ids}
+              images={d.images}
             />
-          );
+          </View>
+        );
 
-        case 'promo_banner':
-          return (
-            <PromoBanner
-              imageUrl={(item.data as any).imageUrl}
-              title={(item.data as any).title}
-              titleAccent={(item.data as any).titleAccent}
-              description={(item.data as any).description}
-              ctaText={(item.data as any).ctaText}
-              action={(item.data as any).action}
+      // ===== BRAND =====
+      case 'brand_grid':
+        return (
+          <View style={{ minHeight: 140 }}>
+            <BrandGridSection
+              title={item.title || 'Top Brands'}
+              ids={d.ids}
+              images={d.images}
             />
-          );
+          </View>
+        );
 
-        case 'flash_sale':
+      // ===== VIDEO =====
+      case 'trending_videos':
+        return (
+          <TrendingVideosSection
+            title={item.title || 'Trending Now'}
+            videos={d.videos || []}
+          />
+        );
+
+      // ===== FLASH SALE =====
+      case 'flash_sale':
+        return (
+          <FlashSaleSection
+            title={item.title}
+            endTime={d.endTime}
+            productIds={d.products?.ids}
+          />
+        );
+
+      // ===== REWARD CARD =====
+      case 'reward_card':
+        return (
+          <RewardProgramCard
+            title={d.title}
+            description={d.description}
+            ctaText={d.ctaText}
+          />
+        );
+
+      // ===== 6 PRODUCT LAYOUTS =====
+
+      // 1. Product Slider — default card (name, price, wishlist)
+      case 'product_slider':
+        return (
+          <ProductSliderSection
+            title={item.title || 'Products'}
+            dataSource={item.dataSource}
+            layout="slider_2_5"
+            cardStyle="compact"
+          />
+        );
+
+      // 2. Product Slider — custom images (image-only cards)
+      case 'product_slider_image':
+        return (
+          <ProductSliderSection
+            title={item.title || 'Products'}
+            dataSource={item.dataSource}
+            images={d.images}
+            layout="slider_2_5"
+            cardStyle="image_only"
+          />
+        );
+
+      // 3. Grid 2x2 — default card
+      case 'product_grid_2x2':
+        return (
+          <ProductGridSection
+            title={item.title}
+            dataSource={item.dataSource}
+            columns={2}
+            withContainer={true}
+            containerColor={d.background || '#F8F5F0'}
+            cardStyle="default"
+          />
+        );
+
+      // 4. Grid 2x2 — custom images
+      case 'product_grid_2x2_image':
+        return (
+          <ProductGridSection
+            title={item.title}
+            dataSource={item.dataSource}
+            images={d.images}
+            columns={2}
+            withContainer={true}
+            containerColor={d.background || '#F8F5F0'}
+            cardStyle="image_only"
+          />
+        );
+
+      // 5. Grid 3x3 — default card
+      case 'product_grid_3x3':
+        return (
+          <ProductGridSection
+            title={item.title}
+            dataSource={item.dataSource}
+            columns={3}
+            withContainer={true}
+            containerColor={d.background || '#F8F5F0'}
+            cardStyle="default"
+          />
+        );
+
+      // 6. Grid 3x3 — custom images
+      case 'product_grid_3x3_image':
+        return (
+          <ProductGridSection
+            title={item.title}
+            dataSource={item.dataSource}
+            images={d.images}
+            columns={3}
+            withContainer={true}
+            containerColor={d.background || '#F8F5F0'}
+            cardStyle="image_only"
+          />
+        );
+
+      // ===== LEGACY: old product_list (still supported) =====
+      case 'product_list': {
+        const layoutType = d.layout;
+
+        if (layoutType && (layoutType.startsWith('grid_3_col') || layoutType.startsWith('grid_2_col'))) {
           return (
-            <FlashSaleSection
+            <ProductGridSection
               title={item.title}
-              endTime={(item.data as any).endTime}
-              productIds={(item.data as any).products?.ids}
+              dataSource={item.dataSource}
+              images={d.images}
+              withContainer={layoutType.includes('container')}
+              columns={layoutType.startsWith('grid_2_col') ? 2 : 3}
+              cardStyle={d.card_style === 'image_only' ? 'image_only' : 'default'}
             />
           );
+        }
 
-        case 'trending_videos':
-          return (
-            <TrendingVideosSection
-              title={item.title || 'Trending Now'}
-              videos={(item.data as any).videos || []}
-            />
-          );
-
-        case 'top_rated':
-          return (
-            <TopRatedSection
-              title={item.title || 'Top Rated Favorites'}
-              productIds={(item.data as any).ids}
-            />
-          );
-
-        case 'editors_choice':
-          return (
-            <EditorsChoiceSection
-              title={item.title || "Editor's Choice"}
-              productIds={(item.data as any).ids}
-            />
-          );
-
-        case 'reward_card':
-          return (
-            <RewardProgramCard
-              title={(item.data as any).title}
-              description={(item.data as any).description}
-              ctaText={(item.data as any).ctaText}
-            />
-          );
-
-        // Existing Components
-        case 'hero_banner':
-          return (
-            <View style={{ minHeight: 200 }}>
-              <BannerSection
-                imageUrl={(item.data as any).imageUrl || ''}
-                action={(item.data as any).action}
-              />
-            </View>
-          );
-
-        case 'micro_animation':
-          return <View style={{ minHeight: 100 }}><FashionMicroAnimations /></View>;
-
-        case 'beauty_animation':
-          return <View style={{ minHeight: 100 }}><BeautyMicroAnimations /></View>;
-
-        case 'section_title':
-          return (
-            <GlassView style={styles.sectionTitleContainer}>
-              <Text style={styles.sectionTitleText}>
-                {(item.data as any).text}
-              </Text>
-            </GlassView>
-          );
-
-        case 'product_list':
-          const layoutType = (item.data as any).layout;
-
-          if (layoutType && (layoutType.startsWith('grid_3_col') || layoutType.startsWith('grid_2_col'))) {
-            return (
-              <ProductGridSection
-                title={item.title}
-                dataSource={(item as any).dataSource}
-                images={(item.data as any).images} // Pass images for override
-                withContainer={layoutType.includes('container')}
-                columns={layoutType.startsWith('grid_2_col') ? 2 : 3}
-              />
-            );
-          }
-
-          const cardStyle = (item.data as any).card_style;
-
-          return (
-            <ProductSliderSection
-              title={item.title || 'Products'}
-              dataSource={(item as any).dataSource}
-              images={(item.data as any).images}
-              layout="slider_2_5"
-              cardStyle={cardStyle}
-            />
-          );
-
-        case 'category_grid':
-          const gridData = item.data as any;
-          return (
-            <View style={{ minHeight: 140 }}>
-              <CategoryGridSection
-                title={item.title || 'Categories'}
-                categories={gridData.ids}
-                images={gridData.images}
-              />
-            </View>
-          );
-
-        case 'brand_grid':
-          const brandData = item.data as any;
-          return (
-            <View style={{ minHeight: 140 }}>
-              <BrandGridSection
-                title={item.title || 'Top Brands'}
-                ids={brandData.ids}
-                images={brandData.images}
-              />
-            </View>
-          );
-
-        default:
-          return null;
+        return (
+          <ProductSliderSection
+            title={item.title || 'Products'}
+            dataSource={item.dataSource}
+            images={d.images}
+            layout="slider_2_5"
+            cardStyle={d.card_style}
+          />
+        );
       }
-    }
 
-    return null;
-  }, [handleProductPress]);
+      default:
+        return null;
+    }
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -351,17 +401,5 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingBottom: 100,
-  },
-  sectionTitleContainer: {
-    marginHorizontal: 20,
-    marginBottom: 15,
-    marginTop: 10,
-    padding: 10,
-    backgroundColor: 'rgba(255,255,255,0.4)',
-  },
-  sectionTitleText: {
-    fontFamily: FONTS.serif.semiBold,
-    fontSize: 20,
-    color: COLORS.primary,
   },
 });
