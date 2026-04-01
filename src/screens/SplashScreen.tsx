@@ -16,6 +16,7 @@ import { COLORS } from '../constants';
 import { FONTS } from '../constants/fonts';
 import { RootStackParamList } from '../navigation/types';
 import { useUserStore } from '../store/userStore';
+import { processPendingNavigation } from '../navigation/navigationRef';
 
 type SplashScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -57,6 +58,8 @@ export default function SplashScreen() {
             index: 0,
             routes: [{ name: 'MainTabs' }],
           });
+          // Process any notification navigation that was queued during cold start
+          processPendingNavigation();
         } else {
           navigation.reset({
             index: 0,

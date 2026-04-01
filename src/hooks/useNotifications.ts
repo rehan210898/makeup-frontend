@@ -62,9 +62,9 @@ export const useNotifications = () => {
     try {
       if (data.type === 'PROMOTION' && data.link) {
         try { Linking.openURL(Linking.createURL(data.link)); } catch (e) { console.error('Failed to open promotion link:', e); }
-      } else if (data.type === 'ORDER_UPDATE' || data.type === 'ORDER_CONFIRMATION') {
-        if (data.orderId) {
-          navigate('OrderTracking', { orderId: data.orderId });
+      } else if (data.type === 'ORDER_UPDATE' || data.type === 'ORDER_CONFIRMATION' || data.type === 'SHIPMENT_UPDATE') {
+        if (data.orderId || data.params?.orderId) {
+          navigate('OrderTracking', { orderId: data.orderId || data.params.orderId });
         }
       } else if (data.type === 'PRODUCT_RESTOCK' && data.productId) {
         navigate('ProductDetail', { productId: data.productId });
@@ -102,10 +102,11 @@ export const useNotifications = () => {
     );
 
     // Check if app was opened by a notification (Cold Start)
+    // Navigation may not be ready yet — navigate() will queue it,
+    // and SplashScreen will process the pending navigation after reset
     Notifications.getLastNotificationResponseAsync().then(response => {
       if (response) {
-        // Small delay to ensure navigation is ready
-        setTimeout(() => handleNotificationResponse(response), 500);
+        handleNotificationResponse(response);
       }
     });
 
