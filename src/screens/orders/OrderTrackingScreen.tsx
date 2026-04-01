@@ -1,39 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { COLORS } from '../../constants';
-import { orderService, ShipmentTracking } from '../../services/orderService';
+import { orderService } from '../../services/orderService';
 import { Order } from '../../types';
 import ArrowLeftIcon from '../../components/icons/ArrowLeftIcon';
 import { OrderTrackingSkeleton } from '../../components/skeletons/OrderTrackingSkeleton';
 
-// Default WooCommerce-only steps (when no Shiprocket data)
+// Visual steps for the order progress tracker
 const ORDER_STEPS = [
   { key: 'pending', label: 'Order Placed', icon: 'file-text' as const },
   { key: 'processing', label: 'Processing', icon: 'package' as const },
   { key: 'on-hold', label: 'On Hold', icon: 'clock' as const },
   { key: 'completed', label: 'Delivered', icon: 'check-circle' as const },
 ];
-
-// Detailed Shiprocket shipping steps
-const SHIPMENT_STEPS = [
-  { key: 'order_placed', label: 'Order Placed', icon: 'file-text' as const, statusCodes: [] },
-  { key: 'processing', label: 'Processing', icon: 'package' as const, statusCodes: [1, 2, 5] },
-  { key: 'pickup', label: 'Picked Up', icon: 'truck' as const, statusCodes: [3, 4, 6, 19] },
-  { key: 'in_transit', label: 'In Transit', icon: 'navigation' as const, statusCodes: [18, 38] },
-  { key: 'out_for_delivery', label: 'Out for Delivery', icon: 'map-pin' as const, statusCodes: [17] },
-  { key: 'delivered', label: 'Delivered', icon: 'check-circle' as const, statusCodes: [7, 26] },
-];
-
-function getShipmentStepIndex(statusCode: number): number {
-  for (let i = SHIPMENT_STEPS.length - 1; i >= 0; i--) {
-    if (SHIPMENT_STEPS[i].statusCodes.includes(statusCode)) {
-      return i;
-    }
-  }
-  return 0;
-}
 
 /**
  * Screen to track the status of a specific order.
@@ -43,15 +24,16 @@ export default function OrderTrackingScreen() {
   const navigation = useNavigation();
   const route = useRoute<any>();
   const { orderId, fromCheckout } = route.params || {};
-  
+
   const [order, setOrder] = useState<Order | null>(null);
-  const [shipment, setShipment] = useState<ShipmentTracking | null>(null);
   const [loading, setLoading] = useState(true);
 
   // --- Navigation Handlers ---
 
   const handleBack = () => {
       if (fromCheckout) {
+          // If coming from checkout, go back to Cart (which will be empty) or Home
+          // 'MainTabs' -> 'CartTab' ensures we land in a valid stack
           navigation.navigate('MainTabs', { screen: 'CartTab' });
       } else {
           navigation.goBack();
@@ -60,13 +42,14 @@ export default function OrderTrackingScreen() {
 
   // --- Effects ---
 
-  // Poll for order + shipment updates every 10 seconds
+  // Poll for order updates every 10 seconds
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
 
     if (orderId) {
-      loadOrderDetails(false);
+      loadOrderDetails(false); // Initial load with spinner
 
+      // Silent update loop
       intervalId = setInterval(() => {
         loadOrderDetails(true);
       }, 10000);
@@ -80,12 +63,8 @@ export default function OrderTrackingScreen() {
   const loadOrderDetails = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const [data, tracking] = await Promise.all([
-        orderService.getOrderById(orderId),
-        orderService.getShipmentTracking(orderId),
-      ]);
+      const data = await orderService.getOrderById(orderId);
       setOrder(data);
-      setShipment(tracking);
     } catch (error) {
       console.error('Error fetching order details:', error);
     } finally {
@@ -104,7 +83,7 @@ export default function OrderTrackingScreen() {
       case 'cancelled': return COLORS.error;
       case 'refunded': return COLORS.gray[500];
       case 'failed': return COLORS.error;
-      case 'draft': 
+      case 'draft':
       case 'auto-draft':
       case 'checkout-draft':
         return COLORS.gray[400];
@@ -123,7 +102,7 @@ export default function OrderTrackingScreen() {
       case 'refunded': return 'Refunded';
       case 'failed': return 'Failed';
       case 'cancel-request': return 'Cancel Request';
-      case 'draft': 
+      case 'draft':
       case 'auto-draft':
       case 'checkout-draft':
         return 'Draft';
@@ -177,108 +156,42 @@ export default function OrderTrackingScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        
+
         {/* Status Stepper */}
         <View style={styles.card}>
           <View style={styles.statusHeader}>
             <Text style={styles.sectionTitle}>Order Status</Text>
             <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) + '20' }]}>
                 <Text style={[styles.statusBadgeText, { color: getStatusColor(order.status) }]}>
-                    {shipment ? shipment.status : getStatusLabel(order.status)}
+                    {getStatusLabel(order.status)}
                 </Text>
             </View>
           </View>
+          <View style={styles.stepperContainer}>
+            {ORDER_STEPS.map((step, index) => {
+              const status = getStepStatus(order.status, step.key);
+              const isActive = status === 'active';
+              const isLast = index === ORDER_STEPS.length - 1;
 
-          {/* Shiprocket detailed tracking or WooCommerce basic steps */}
-          {shipment ? (
-            <View style={styles.stepperContainer}>
-              {SHIPMENT_STEPS.map((step, index) => {
-                const activeIdx = getShipmentStepIndex(shipment.status_code);
-                // Order Placed is always active
-                const isActive = index === 0 || index <= activeIdx;
-                const isCurrent = index === activeIdx;
-                const isLast = index === SHIPMENT_STEPS.length - 1;
-                const nextActive = !isLast && (index + 1 === 0 || index + 1 <= activeIdx);
-
-                return (
-                  <View key={step.key} style={styles.stepRow}>
-                    <View style={styles.stepIndicatorContainer}>
-                      <View style={[styles.stepDot, isActive && styles.stepDotActive]}>
-                        <Feather name={step.icon} size={16} color={isActive ? COLORS.success : '#999'} />
-                      </View>
-                      {!isLast && <View style={[styles.stepLine, nextActive && styles.stepLineActive]} />}
+              return (
+                <View key={step.key} style={styles.stepRow}>
+                  <View style={styles.stepIndicatorContainer}>
+                    <View style={[styles.stepDot, isActive && styles.stepDotActive]}>
+                      <Feather name={step.icon} size={16} color={isActive ? COLORS.success : '#999'} />
                     </View>
-                    <View style={styles.stepContent}>
-                      <Text style={[styles.stepLabel, isActive && styles.stepLabelActive]}>{step.label}</Text>
-                      {isCurrent && (
-                        <Text style={styles.currentStatusText}>{shipment.status}</Text>
-                      )}
-                    </View>
+                    {!isLast && <View style={[styles.stepLine, isActive && getStepStatus(order.status, ORDER_STEPS[index+1].key) === 'active' && styles.stepLineActive]} />}
                   </View>
-                );
-              })}
-            </View>
-          ) : (
-            <View style={styles.stepperContainer}>
-              {ORDER_STEPS.map((step, index) => {
-                const status = getStepStatus(order.status, step.key);
-                const isActive = status === 'active';
-                const isLast = index === ORDER_STEPS.length - 1;
-
-                return (
-                  <View key={step.key} style={styles.stepRow}>
-                    <View style={styles.stepIndicatorContainer}>
-                      <View style={[styles.stepDot, isActive && styles.stepDotActive]}>
-                        <Feather name={step.icon} size={16} color={isActive ? COLORS.success : '#999'} />
-                      </View>
-                      {!isLast && <View style={[styles.stepLine, isActive && getStepStatus(order.status, ORDER_STEPS[index+1].key) === 'active' && styles.stepLineActive]} />}
-                    </View>
-                    <View style={styles.stepContent}>
-                      <Text style={[styles.stepLabel, isActive && styles.stepLabelActive]}>{step.label}</Text>
-                      {order.status === step.key && (
-                          <Text style={styles.currentStatusText}>Current Status</Text>
-                      )}
-                    </View>
+                  <View style={styles.stepContent}>
+                    <Text style={[styles.stepLabel, isActive && styles.stepLabelActive]}>{step.label}</Text>
+                    {order.status === step.key && (
+                        <Text style={styles.currentStatusText}>Current Status</Text>
+                    )}
                   </View>
-                );
-              })}
-            </View>
-          )}
-        </View>
-
-        {/* Shipment Details Card (AWB, Courier, ETD) */}
-        {shipment && (shipment.awb || shipment.courier) && (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Shipment Details</Text>
-            {shipment.courier && (
-              <View style={styles.shipmentRow}>
-                <Text style={styles.shipmentLabel}>Courier</Text>
-                <Text style={styles.shipmentValue}>{shipment.courier}</Text>
-              </View>
-            )}
-            {shipment.awb && (
-              <View style={styles.shipmentRow}>
-                <Text style={styles.shipmentLabel}>AWB / Tracking No.</Text>
-                <Text style={styles.shipmentValue}>{shipment.awb}</Text>
-              </View>
-            )}
-            {shipment.etd && (
-              <View style={styles.shipmentRow}>
-                <Text style={styles.shipmentLabel}>Expected Delivery</Text>
-                <Text style={styles.shipmentValue}>{shipment.etd}</Text>
-              </View>
-            )}
-            {shipment.tracking_url && (
-              <TouchableOpacity
-                style={styles.trackBtn}
-                onPress={() => Linking.openURL(shipment.tracking_url!)}
-              >
-                <Feather name="external-link" size={14} color={COLORS.primary} />
-                <Text style={styles.trackBtnText}>Track on Courier Website</Text>
-              </TouchableOpacity>
-            )}
+                </View>
+              );
+            })}
           </View>
-        )}
+        </View>
 
         {/* Shipping Info */}
         <View style={styles.card}>
@@ -322,7 +235,7 @@ export default function OrderTrackingScreen() {
                     </View>
                 );
             })}
-            
+
             <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>Total Amount</Text>
                 <Text style={styles.totalValue}>₹ {order.total}</Text>
@@ -343,8 +256,8 @@ export default function OrderTrackingScreen() {
         )}
 
         {order.status === 'completed' && (
-          <TouchableOpacity 
-              style={styles.supportBtn} 
+          <TouchableOpacity
+              style={styles.supportBtn}
               onPress={() => navigation.navigate('Refund', { orderId: order.id })}
           >
               <Text style={styles.supportBtnText}>Request Refund</Text>
@@ -567,36 +480,5 @@ const styles = StyleSheet.create({
   supportBtnText: {
       color: '#555',
       fontWeight: 'bold',
-  },
-  shipmentRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      paddingVertical: 8,
-      borderBottomWidth: 1,
-      borderBottomColor: '#f5f5f5',
-  },
-  shipmentLabel: {
-      fontSize: 13,
-      color: '#888',
-  },
-  shipmentValue: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: COLORS.primary,
-  },
-  trackBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginTop: 12,
-      paddingVertical: 10,
-      backgroundColor: COLORS.primary + '10',
-      borderRadius: 8,
-      gap: 6,
-  },
-  trackBtnText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: COLORS.primary,
-  },
+  }
 });
