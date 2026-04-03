@@ -13,7 +13,7 @@ export type RootStackParamList = {
   Splash: undefined;
   MainTabs: NavigatorScreenParams<BottomTabParamList>;
   ProductDetail: { productId: number };
-  ProductList: { categoryId?: number; categoryName?: string; search?: string; attribute?: string; termId?: number; title?: string };
+  ProductList: { categoryId?: number; categoryName?: string; parentCategoryId?: number; parentCategoryName?: string; search?: string; attribute?: string; termId?: number; title?: string };
   Checkout: { buyNowItem?: { productId: number; variationId?: number; quantity: number; isStitched?: boolean } } | undefined;
   OrderConfirmation: { orderId: number };
   OrderTracking: { orderId: number; fromCheckout?: boolean };

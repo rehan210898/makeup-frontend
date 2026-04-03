@@ -48,7 +48,6 @@ export const BannerSection: React.FC<BannerSectionProps> = ({ imageUrl, action }
           contentFit="cover"
           transition={200}
           cachePolicy="memory-disk"
-          placeholder={{ blurhash: 'L5H2EC=PM+yV0g-mq.wG9c010J}I' }}
           recyclingKey={imageUrl}
         />
       </View>
@@ -67,7 +66,7 @@ const styles = StyleSheet.create({
     aspectRatio: 16/9,
     borderRadius: 16,
     overflow: 'hidden',
-    backgroundColor: COLORS.white,
+    backgroundColor: '#F0F0F0',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,

@@ -101,6 +101,7 @@ export interface Category {
   id: number;
   name: string;
   slug: string;
+  parent?: number;
   image?: string | { src: string; id: number } | null;
   count?: number;
 }

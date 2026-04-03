@@ -4,6 +4,7 @@ import { ApiResponse, HomeLayoutSection } from '../types';
 export interface CategoryLayoutItem {
   id: number;
   name: string;
+  parent: number;
   image: string | null;
 }
 

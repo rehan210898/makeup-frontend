@@ -95,7 +95,6 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
         contentFit="cover"
         transition={200}
         cachePolicy="memory-disk"
-        placeholder={{ blurhash: 'L5H2EC=PM+yV0g-mq.wG9c010J}I' }}
         recyclingKey={item.imageUrl}
       />
       {/* <LinearGradient
@@ -179,6 +178,7 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH,
     height: CAROUSEL_HEIGHT,
     position: 'relative',
+    backgroundColor: '#F0F0F0',
   },
   slideImage: {
     width: '100%',

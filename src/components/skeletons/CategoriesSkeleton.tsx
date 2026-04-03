@@ -8,12 +8,14 @@ export const CategoriesSkeleton = () => {
     <View style={styles.grid}>
       {Array.from({ length: 12 }).map((_, i) => (
         <View key={i} style={styles.card}>
-          {/* Image placeholder */}
-          <Skeleton width="100%" height={90} borderRadius={0} />
+          {/* Circular image placeholder */}
+          <View style={[styles.imageCircle, { backgroundColor: COLORS.pastels[i % COLORS.pastels.length] }]}>
+            <Skeleton width={80} height={80} borderRadius={40} />
+          </View>
           {/* Name placeholder */}
           <View style={styles.nameContainer}>
-            <Skeleton width="80%" height={12} borderRadius={4} />
-            <Skeleton width="50%" height={12} borderRadius={4} style={{ marginTop: 6 }} />
+            <Skeleton width="70%" height={12} borderRadius={4} />
+            <Skeleton width="50%" height={12} borderRadius={4} style={{ marginTop: 4 }} />
           </View>
         </View>
       ))}
@@ -33,17 +35,18 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: COLORS.white,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
     marginBottom: 10,
+    alignItems: 'center',
+  },
+  imageCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    overflow: 'hidden',
+    marginTop: 10,
   },
   nameContainer: {
     padding: 10,
     alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#FAFAFA',
   },
 });

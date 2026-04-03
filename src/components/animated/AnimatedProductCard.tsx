@@ -108,6 +108,7 @@ const AnimatedProductCard: React.FC<AnimatedProductCardProps> = ({
               contentFit="cover"
               transition={300}
               cachePolicy="memory-disk"
+              recyclingKey={`animated-product-${item.id}`}
             />
 
             {/* Discount Badge */}

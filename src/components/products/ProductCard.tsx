@@ -65,7 +65,7 @@ const ProductCard = ({ item, onPress, onWishlistPress, isWishlisted = false, hid
           contentPosition="center"
           transition={300}
           cachePolicy="memory-disk"
-          placeholder={{ blurhash: 'L9AB*A%LPqyuI~IpIVaK00?b~qD%' }}
+          recyclingKey={`product-${item.id}`}
         />
         
         {/* 1. Top Left: Wishlist */}

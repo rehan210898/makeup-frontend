@@ -73,6 +73,8 @@ export default function WishlistScreen() {
             style={styles.image}
             contentFit="cover"
             transition={200}
+            cachePolicy="memory-disk"
+            recyclingKey={`wishlist-${item.id}`}
           />
         </View>
         <View style={styles.info}>

@@ -50,6 +50,9 @@ export default function CartScreen() {
           source={{ uri: item.product.images?.[0]?.src }}
           style={styles.itemImage}
           contentFit="cover"
+          transition={200}
+          cachePolicy="memory-disk"
+          recyclingKey={`cart-${item.product_id}-${item.variation_id || 'simple'}`}
         />
       </View>
       

@@ -42,10 +42,22 @@ export default function CategoriesScreen() {
   };
 
   const handleCategoryPress = (category: CategoryLayoutItem) => {
-    navigation.navigate('ProductList', {
-      categoryId: category.id,
-      categoryName: category.name
-    });
+    if (category.parent && category.parent > 0) {
+      // It's a subcategory — find parent name from our list
+      const parentCat = categories.find(c => c.id === category.parent);
+      navigation.navigate('ProductList', {
+        categoryId: category.id,
+        categoryName: category.name,
+        parentCategoryId: category.parent,
+        parentCategoryName: parentCat?.name || undefined,
+      });
+    } else {
+      // It's a main category
+      navigation.navigate('ProductList', {
+        categoryId: category.id,
+        categoryName: category.name,
+      });
+    }
   };
 
   return (
@@ -98,7 +110,7 @@ export default function CategoriesScreen() {
 
        {!loading && !error && categories.length > 0 && (
           <View style={styles.categoriesGrid}>
-            {categories.map((category) => (
+            {categories.map((category, index) => (
               <TouchableOpacity
                 key={category.id}
                 style={styles.categoryCard}
@@ -106,19 +118,18 @@ export default function CategoriesScreen() {
                 onPress={() => handleCategoryPress(category)}
               >
                 {category.image ? (
-                  <View style={styles.imageContainer}>
+                  <View style={[styles.imageContainer, { backgroundColor: COLORS.pastels[index % COLORS.pastels.length] }]}>
                     <Image
                       source={{ uri: category.image }}
                       style={styles.categoryImage}
                       contentFit="cover"
                       transition={200}
                       cachePolicy="memory-disk"
-                      placeholder={{ blurhash: 'L5H2EC=PM+yV0g-mq.wG9c010J}I' }}
                       recyclingKey={`cat-screen-${category.id}`}
                     />
                   </View>
                 ) : (
-                  <View style={styles.categoryIconBox}>
+                  <View style={[styles.categoryIconBox, { backgroundColor: COLORS.pastels[index % COLORS.pastels.length] }]}>
                     {getIconForCategory(category.name, { size: 48, color: COLORS.primary })}
                   </View>
                 )}
@@ -241,36 +252,38 @@ const styles = StyleSheet.create({
     margin: '1.15%',
     borderRadius: 16,
     backgroundColor: COLORS.white,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
     overflow: 'hidden',
     marginBottom: 10,
+    alignItems: 'center',
   },
   imageContainer: {
-    width: '100%',
-    height: 90,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+    marginTop: 10,
   },
   categoryImage: {
     width: '100%',
     height: '100%',
+    borderRadius: 40,
   },
   categoryIconBox: {
-    width: '100%',
-    height: 90,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(212, 175, 55, 0.1)',
+    marginTop: 10,
   },
   categoryInfo: {
     padding: 10,
     alignItems: 'center',
-    borderTopWidth: 1,
+    borderTopWidth: 0,
     borderTopColor: '#FAFAFA',
   },
   categoryName: {

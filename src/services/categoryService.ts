@@ -6,6 +6,14 @@ class CategoryService {
     return apiClient.get<ApiResponse<Category[]>>(`/categories?page=${page}&per_page=${perPage}`);
   }
 
+  async getMainCategories(perPage: number = 100): Promise<ApiResponse<Category[]>> {
+    return apiClient.get<ApiResponse<Category[]>>(`/categories?parent=0&per_page=${perPage}&hide_empty=true`);
+  }
+
+  async getSubCategories(parentId: number, perPage: number = 100): Promise<ApiResponse<Category[]>> {
+    return apiClient.get<ApiResponse<Category[]>>(`/categories?parent=${parentId}&per_page=${perPage}&hide_empty=true`);
+  }
+
   async getCategoryById(id: number): Promise<ApiResponse<Category>> {
     return apiClient.get<ApiResponse<Category>>(`/categories/${id}`);
   }

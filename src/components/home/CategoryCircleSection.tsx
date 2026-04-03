@@ -63,10 +63,20 @@ export const CategoryCircleSection: React.FC<CategoryCircleSectionProps> = ({
 
   const handlePress = (category: Category) => {
     setSelectedId(category.id);
-    navigation.navigate('ProductList', {
-      categoryId: category.id,
-      categoryName: category.name,
-    });
+    if (category.parent && category.parent > 0) {
+      const parentCat = categories.find(c => c.id === category.parent);
+      navigation.navigate('ProductList', {
+        categoryId: category.id,
+        categoryName: category.name,
+        parentCategoryId: category.parent,
+        parentCategoryName: parentCat?.name || undefined,
+      });
+    } else {
+      navigation.navigate('ProductList', {
+        categoryId: category.id,
+        categoryName: category.name,
+      });
+    }
   };
 
   const handleViewAll = () => {
@@ -101,7 +111,6 @@ export const CategoryCircleSection: React.FC<CategoryCircleSectionProps> = ({
               contentFit="cover"
               transition={200}
               cachePolicy="memory-disk"
-              placeholder={{ blurhash: 'L5H2EC=PM+yV0g-mq.wG9c010J}I' }}
               recyclingKey={`cat-circle-${item.id}`}
             />
           ) : (

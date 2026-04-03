@@ -15,6 +15,7 @@ interface CategoryGridSectionProps {
 
 export const CategoryGridSection: React.FC<CategoryGridSectionProps> = ({ title, categories: categoryIds, images }) => {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
   const navigation = useNavigation<any>();
 
   useEffect(() => {
@@ -25,11 +26,11 @@ export const CategoryGridSection: React.FC<CategoryGridSectionProps> = ({ title,
     try {
       const response = await categoryService.getCategories(1, 100);
       let loadedCats = response.data || [];
-      
+
       if (categoryIds && categoryIds.length > 0) {
         // 1. Filter to get only requested categories
         loadedCats = loadedCats.filter(c => categoryIds.includes(c.id));
-        
+
         // 2. Sort them to match the order in categoryIds
         loadedCats.sort((a, b) => {
           return categoryIds.indexOf(a.id) - categoryIds.indexOf(b.id);
@@ -54,14 +55,42 @@ export const CategoryGridSection: React.FC<CategoryGridSectionProps> = ({ title,
       setCategories(loadedCats);
     } catch (error) {
       console.error('Error loading categories:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const renderSkeleton = () => (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <View style={{ width: 120, height: 24, backgroundColor: COLORS.backgroundSubtle, borderRadius: 4 }} />
+      </View>
+      <View style={{ flexDirection: 'row', paddingHorizontal: 20 }}>
+        {[1, 2, 3, 4, 5].map((key) => (
+          <View key={key} style={{ marginRight: 15, alignItems: 'center', width: 80 }}>
+            <View style={{ width: 70, height: 70, borderRadius: 35, backgroundColor: COLORS.backgroundSubtle, marginBottom: 8 }} />
+            <View style={{ width: 50, height: 12, backgroundColor: COLORS.backgroundSubtle, borderRadius: 4 }} />
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+
   const handlePress = (category: Category) => {
-    navigation.navigate('ProductList', { 
-      categoryId: category.id, 
-      categoryName: category.name 
-    });
+    if (category.parent && category.parent > 0) {
+      const parentCat = categories.find(c => c.id === category.parent);
+      navigation.navigate('ProductList', {
+        categoryId: category.id,
+        categoryName: category.name,
+        parentCategoryId: category.parent,
+        parentCategoryName: parentCat?.name || undefined,
+      });
+    } else {
+      navigation.navigate('ProductList', {
+        categoryId: category.id,
+        categoryName: category.name,
+      });
+    }
   };
 
   const renderItem = ({ item }: { item: Category }) => (
@@ -78,7 +107,6 @@ export const CategoryGridSection: React.FC<CategoryGridSectionProps> = ({ title,
             contentFit="cover"
             transition={200}
             cachePolicy="memory-disk"
-            placeholder={{ blurhash: 'L5H2EC=PM+yV0g-mq.wG9c010J}I' }}
             recyclingKey={`cat-grid-${item.id}`}
           />
        ) : (
@@ -89,6 +117,7 @@ export const CategoryGridSection: React.FC<CategoryGridSectionProps> = ({ title,
     </TouchableOpacity>
   );
 
+  if (loading) return renderSkeleton();
   if (!categories.length) return null;
 
   return (

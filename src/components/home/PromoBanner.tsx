@@ -65,7 +65,6 @@ export const PromoBanner: React.FC<PromoBannerProps> = ({
           contentFit="cover"
           transition={200}
           cachePolicy="memory-disk"
-          placeholder={{ blurhash: 'L5H2EC=PM+yV0g-mq.wG9c010J}I' }}
           recyclingKey={imageUrl}
         />
         <LinearGradient
@@ -108,6 +107,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
     position: 'relative',
+    backgroundColor: '#F0F0F0',
   },
   image: {
     width: '100%',

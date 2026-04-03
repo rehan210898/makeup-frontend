@@ -14,6 +14,7 @@ interface BrandGridSectionProps {
 
 export const BrandGridSection: React.FC<BrandGridSectionProps> = ({ title, ids, images }) => {
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [loading, setLoading] = useState(true);
   const navigation = useNavigation<any>();
 
   useEffect(() => {
@@ -23,7 +24,7 @@ export const BrandGridSection: React.FC<BrandGridSectionProps> = ({ title, ids, 
   const loadBrands = async () => {
     try {
       let loadedBrands = await BrandService.getBrands(ids);
-      
+
       // Apply override images if provided
       if (images && images.length > 0) {
         loadedBrands = loadedBrands.map((brand, index) => {
@@ -39,8 +40,26 @@ export const BrandGridSection: React.FC<BrandGridSectionProps> = ({ title, ids, 
       setBrands(loadedBrands);
     } catch (error) {
       console.error('Error loading brands:', error);
+    } finally {
+      setLoading(false);
     }
   };
+
+  const renderSkeleton = () => (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <View style={{ width: 120, height: 24, backgroundColor: COLORS.backgroundSubtle, borderRadius: 4 }} />
+      </View>
+      <View style={{ flexDirection: 'row', paddingHorizontal: 20 }}>
+        {[1, 2, 3, 4].map((key) => (
+          <View key={key} style={{ marginRight: 15, alignItems: 'center', width: 80 }}>
+            <View style={{ width: 70, height: 70, borderRadius: 35, backgroundColor: COLORS.backgroundSubtle, marginBottom: 8 }} />
+            <View style={{ width: 50, height: 12, backgroundColor: COLORS.backgroundSubtle, borderRadius: 4 }} />
+          </View>
+        ))}
+      </View>
+    </View>
+  );
 
   const handlePress = (brand: Brand) => {
     // Navigate to ProductList with attribute filter
@@ -64,7 +83,6 @@ export const BrandGridSection: React.FC<BrandGridSectionProps> = ({ title, ids, 
             contentFit="cover"
             transition={200}
             cachePolicy="memory-disk"
-            placeholder={{ blurhash: 'L5H2EC=PM+yV0g-mq.wG9c010J}I' }}
             recyclingKey={`brand-${item.id}`}
           />
        ) : (
@@ -77,6 +95,7 @@ export const BrandGridSection: React.FC<BrandGridSectionProps> = ({ title, ids, 
     </TouchableOpacity>
   );
 
+  if (loading) return renderSkeleton();
   if (!brands.length) return null;
 
   return (
