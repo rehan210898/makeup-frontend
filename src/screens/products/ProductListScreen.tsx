@@ -122,6 +122,32 @@ export default function ProductListScreen() {
     flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
   }, []);
 
+  // Re-initialize filters when route params change (handles screen reuse via navigate)
+  const paramsKey = `${categoryId}-${parentCategoryId}-${attribute}-${termId}`;
+  const prevParamsKey = useRef(paramsKey);
+  useEffect(() => {
+    if (prevParamsKey.current !== paramsKey) {
+      prevParamsKey.current = paramsKey;
+      const newFilters: Record<string, number[]> = {};
+      if (parentCategoryId && categoryId) {
+        newFilters['category'] = [parentCategoryId];
+        newFilters['subcategory'] = [categoryId];
+      } else if (categoryId) {
+        newFilters['category'] = [categoryId];
+      }
+      if (attribute && termId) newFilters[attribute] = [termId];
+      setSelectedFilters(newFilters);
+      setPriceRange({ min: '', max: '' });
+      setSearchQuery(initialSearch || '');
+      setActiveCategoryId(null);
+      setProducts([]);
+      setPage(1);
+      setHasMore(true);
+      loadProducts(1, true, { filters: newFilters, price: { min: '', max: '' } });
+      return; // skip the normal load below
+    }
+  }, [paramsKey]);
+
   useEffect(() => {
     navigation.setOptions({ headerShown: false });
     loadProducts(1, true);
@@ -835,7 +861,7 @@ export default function ProductListScreen() {
               }}
             >
               <Text style={styles.activeFilterText}>
-                ₹{priceRange.min || '0'} - ₹{priceRange.max || '∞'} ×
+                AED {priceRange.min || '0'} - AED {priceRange.max || '∞'} ×
               </Text>
             </TouchableOpacity>
           ) : null}

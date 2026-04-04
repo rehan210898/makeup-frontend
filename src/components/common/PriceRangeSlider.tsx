@@ -81,7 +81,10 @@ export const PriceRangeSlider: React.FC<PriceRangeSliderProps> = ({
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponderCapture: () => true,
       onMoveShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponderCapture: () => true,
+      onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: (evt) => {
         isDragging.current = true;
         const touchX = evt.nativeEvent.pageX;
@@ -133,6 +136,8 @@ export const PriceRangeSlider: React.FC<PriceRangeSliderProps> = ({
       onPanResponderTerminate: () => {
         isDragging.current = false;
         activeThumb.current = null;
+        // Commit value even on terminate (e.g. ScrollView steals responder)
+        onChangeRef.current(lowRef.current, highRef.current);
       },
     })
   ).current;
@@ -170,14 +175,14 @@ export const PriceRangeSlider: React.FC<PriceRangeSliderProps> = ({
       <View style={styles.valuesRow}>
         <View style={styles.valueBox}>
           <Text style={styles.valueLabel}>Min</Text>
-          <Text style={styles.valueText}>₹ {displayLow}</Text>
+          <Text style={styles.valueText}>AED {displayLow}</Text>
         </View>
         <View style={styles.valueSeparator}>
           <Text style={styles.separatorText}>to</Text>
         </View>
         <View style={[styles.valueBox, { alignItems: 'flex-end' }]}>
           <Text style={styles.valueLabel}>Max</Text>
-          <Text style={styles.valueText}>₹ {displayHigh}</Text>
+          <Text style={styles.valueText}>AED {displayHigh}</Text>
         </View>
       </View>
 
@@ -217,8 +222,8 @@ export const PriceRangeSlider: React.FC<PriceRangeSliderProps> = ({
 
       {/* Range labels */}
       <View style={styles.rangeRow}>
-        <Text style={styles.rangeText}>₹{min}</Text>
-        <Text style={styles.rangeText}>₹{max}</Text>
+        <Text style={styles.rangeText}>AED{min}</Text>
+        <Text style={styles.rangeText}>AED{max}</Text>
       </View>
     </View>
   );

@@ -45,7 +45,7 @@ export default function CategoriesScreen() {
     if (category.parent && category.parent > 0) {
       // It's a subcategory — find parent name from our list
       const parentCat = categories.find(c => c.id === category.parent);
-      navigation.navigate('ProductList', {
+      navigation.push('ProductList', {
         categoryId: category.id,
         categoryName: category.name,
         parentCategoryId: category.parent,
@@ -53,7 +53,7 @@ export default function CategoriesScreen() {
       });
     } else {
       // It's a main category
-      navigation.navigate('ProductList', {
+      navigation.push('ProductList', {
         categoryId: category.id,
         categoryName: category.name,
       });
