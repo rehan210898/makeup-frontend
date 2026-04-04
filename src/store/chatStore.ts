@@ -24,24 +24,20 @@ export interface ChatMessage {
 }
 
 interface ChatState {
-  // Connection
   connected: boolean;
   sessionId: string | null;
   error: string | null;
-
-  // Chat state
   mode: 'AI' | 'HUMAN' | 'PENDING_HUMAN';
   messages: ChatMessage[];
   aiTyping: boolean;
   streaming: boolean;
 
-  // Actions
   setConnected: (connected: boolean) => void;
   setSessionId: (id: string) => void;
   setMode: (mode: 'AI' | 'HUMAN' | 'PENDING_HUMAN') => void;
   setMessages: (messages: ChatMessage[]) => void;
   addMessage: (message: ChatMessage) => void;
-  updateOrAddMessage: (message: ChatMessage) => void;
+  finalizeMessage: (message: ChatMessage) => void;
   appendToStream: (id: string, chunk: string) => void;
   setAiTyping: (typing: boolean) => void;
   setStreaming: (streaming: boolean) => void;
@@ -54,15 +50,15 @@ const initialState = {
   sessionId: null,
   error: null,
   mode: 'AI' as const,
-  messages: [],
+  messages: [] as ChatMessage[],
   aiTyping: false,
   streaming: false,
 };
 
-export const useChatStore = create<ChatState>()((set, get) => ({
+export const useChatStore = create<ChatState>()((set) => ({
   ...initialState,
 
-  setConnected: (connected) => set({ connected, error: connected ? null : get().error }),
+  setConnected: (connected) => set({ connected }),
 
   setSessionId: (sessionId) => set({ sessionId }),
 
@@ -75,20 +71,24 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     aiTyping: false,
   })),
 
-  updateOrAddMessage: (message) => set((state) => {
+  /**
+   * Replace a streamed message (same ID) with the final version from the server.
+   * The final version includes products[]. If no match by ID, add only if
+   * content doesn't duplicate an existing message.
+   */
+  finalizeMessage: (message) => set((state) => {
     const idx = state.messages.findIndex(m => m.id === message.id);
     if (idx !== -1) {
-      // Update existing (e.g., streaming message completed)
       const updated = [...state.messages];
-      updated[idx] = message;
+      updated[idx] = message; // replace with full version (has products)
       return { messages: updated };
     }
-    // Don't add if we already have a local version with same content
-    const hasDuplicate = state.messages.some(
+    // Avoid adding if same content already shown (dedup)
+    const dup = state.messages.some(
       m => m.role === message.role && m.content === message.content &&
-           Math.abs(m.timestamp - message.timestamp) < 2000
+           Math.abs(m.timestamp - message.timestamp) < 5000
     );
-    if (hasDuplicate) return state;
+    if (dup) return state;
     return { messages: [...state.messages, message] };
   }),
 
@@ -96,13 +96,9 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     const idx = state.messages.findIndex(m => m.id === id);
     if (idx !== -1) {
       const updated = [...state.messages];
-      updated[idx] = {
-        ...updated[idx],
-        content: updated[idx].content + chunk,
-      };
+      updated[idx] = { ...updated[idx], content: updated[idx].content + chunk };
       return { messages: updated };
     }
-    // Create new streaming message
     return {
       messages: [...state.messages, {
         id,

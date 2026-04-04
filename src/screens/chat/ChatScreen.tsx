@@ -11,21 +11,28 @@ import {
   ActivityIndicator,
   Image,
   Pressable,
+  Keyboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { COLORS } from '../../constants';
 import { FONTS } from '../../constants/fonts';
 import { useChatStore, ChatMessage, ChatProduct } from '../../store/chatStore';
+import { RootStackParamList } from '../../navigation/types';
 import ChatSocketService from '../../services/ChatSocketService';
 
-// ─── Product Card (inline, for AI suggestions) ──────────────────────
+type ChatNav = NativeStackNavigationProp<RootStackParamList>;
+
+// ─── Product Card ─────────────────────────────────────────────────
 
 function ProductCard({ product, onPress }: { product: ChatProduct; onPress: () => void }) {
   return (
     <Pressable style={styles.productCard} onPress={onPress}>
-      {product.image && (
+      {product.image ? (
         <Image source={{ uri: product.image }} style={styles.productImage} />
+      ) : (
+        <View style={[styles.productImage, { backgroundColor: COLORS.gray[200] }]} />
       )}
       <View style={styles.productInfo}>
         <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
@@ -51,11 +58,16 @@ function ProductCard({ product, onPress }: { product: ChatProduct; onPress: () =
 
 function TypingIndicator() {
   return (
-    <View style={[styles.messageBubble, styles.assistantBubble, { paddingVertical: 12 }]}>
-      <View style={styles.typingDots}>
-        {[0, 1, 2].map(i => (
-          <View key={i} style={[styles.dot, { opacity: 0.4 + (i * 0.2) }]} />
-        ))}
+    <View style={[styles.messageRow]}>
+      <View style={styles.avatar}>
+        <Text style={styles.avatarText}>M</Text>
+      </View>
+      <View style={[styles.messageBubble, styles.assistantBubble, { paddingVertical: 14 }]}>
+        <View style={styles.typingDots}>
+          {[0, 1, 2].map(i => (
+            <View key={i} style={[styles.dot, { opacity: 0.4 + (i * 0.2) }]} />
+          ))}
+        </View>
       </View>
     </View>
   );
@@ -81,13 +93,12 @@ function MessageBubble({ item, onProductPress }: { item: ChatMessage; onProductP
           <Text style={styles.avatarText}>M</Text>
         </View>
       )}
-      <View style={{ maxWidth: '78%' }}>
+      <View style={styles.bubbleWrapper}>
         <View style={[styles.messageBubble, isUser ? styles.userBubble : styles.assistantBubble]}>
           <Text style={[styles.messageText, isUser && styles.userMessageText]}>
             {item.content}
           </Text>
         </View>
-        {/* Product cards */}
         {item.products && item.products.length > 0 && (
           <View style={styles.productsContainer}>
             {item.products.map((product) => (
@@ -111,34 +122,28 @@ function MessageBubble({ item, onProductPress }: { item: ChatMessage; onProductP
 
 export default function ChatScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
+  const navigation = useNavigation<ChatNav>();
   const flatListRef = useRef<FlatList>(null);
   const [inputText, setInputText] = useState('');
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const {
-    messages,
-    mode,
-    aiTyping,
-    connected,
-    error,
-  } = useChatStore();
+  const messages = useChatStore((s) => s.messages);
+  const mode = useChatStore((s) => s.mode);
+  const aiTyping = useChatStore((s) => s.aiTyping);
+  const connected = useChatStore((s) => s.connected);
+  const error = useChatStore((s) => s.error);
 
-  // Connect on mount, disconnect on unmount
   useEffect(() => {
     ChatSocketService.connect();
-    return () => {
-      // Don't disconnect — keep session alive for background
-    };
   }, []);
 
-  // Auto-scroll to bottom
+  // Scroll to bottom when messages change
+  const scrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (messages.length > 0) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-    }
+    if (scrollTimer.current) clearTimeout(scrollTimer.current);
+    scrollTimer.current = setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 150);
   }, [messages.length, aiTyping]);
 
   const handleSend = useCallback(() => {
@@ -146,11 +151,11 @@ export default function ChatScreen() {
     if (!text) return;
     ChatSocketService.sendMessage(text);
     setInputText('');
+    Keyboard.dismiss();
   }, [inputText]);
 
   const handleTyping = useCallback((text: string) => {
     setInputText(text);
-    // Debounced typing indicator
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
       ChatSocketService.sendTyping();
@@ -176,8 +181,8 @@ export default function ChatScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
@@ -199,11 +204,11 @@ export default function ChatScreen() {
       </View>
 
       {/* Error Banner */}
-      {error && (
+      {error ? (
         <View style={styles.errorBanner}>
           <Text style={styles.errorText}>{error}</Text>
         </View>
-      )}
+      ) : null}
 
       {/* Messages */}
       <FlatList
@@ -211,11 +216,15 @@ export default function ChatScreen() {
         data={messages}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
-        contentContainerStyle={[styles.messagesList, { paddingBottom: 12 }]}
+        contentContainerStyle={styles.messagesList}
         showsVerticalScrollIndicator={false}
         initialNumToRender={20}
         maxToRenderPerBatch={10}
+        keyboardShouldPersistTaps="handled"
         ListFooterComponent={aiTyping ? <TypingIndicator /> : null}
+        onContentSizeChange={() => {
+          flatListRef.current?.scrollToEnd({ animated: false });
+        }}
       />
 
       {/* Pending Human Banner */}
@@ -234,9 +243,9 @@ export default function ChatScreen() {
           placeholderTextColor={COLORS.gray[400]}
           value={inputText}
           onChangeText={handleTyping}
-          onSubmitEditing={handleSend}
           returnKeyType="send"
-          multiline
+          blurOnSubmit={false}
+          onSubmitEditing={handleSend}
           maxLength={2000}
           editable={mode !== 'PENDING_HUMAN'}
         />
@@ -259,7 +268,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.backgroundSubtle,
   },
-  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -316,7 +324,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: FONTS.display.semiBold,
   },
-  // Error
   errorBanner: {
     backgroundColor: '#FEE2E2',
     padding: 10,
@@ -327,10 +334,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: FONTS.display.medium,
   },
-  // Messages
   messagesList: {
     paddingHorizontal: 16,
     paddingTop: 16,
+    paddingBottom: 12,
   },
   messageRow: {
     flexDirection: 'row',
@@ -355,10 +362,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: FONTS.display.bold,
   },
+  bubbleWrapper: {
+    maxWidth: '78%',
+    flexShrink: 1,
+  },
   messageBubble: {
     padding: 12,
     borderRadius: 16,
-    maxWidth: '100%',
   },
   userBubble: {
     backgroundColor: COLORS.primary,
@@ -391,7 +401,6 @@ const styles = StyleSheet.create({
   timestampUser: {
     textAlign: 'right',
   },
-  // System messages
   systemMessage: {
     alignItems: 'center',
     marginVertical: 12,
@@ -406,8 +415,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 12,
+    overflow: 'hidden',
   },
-  // Typing indicator
   typingDots: {
     flexDirection: 'row',
     gap: 4,
@@ -419,7 +428,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: COLORS.gray[400],
   },
-  // Products
   productsContainer: {
     marginTop: 8,
     gap: 8,
@@ -478,7 +486,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.display.medium,
     marginTop: 2,
   },
-  // Pending banner
   pendingBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -492,7 +499,6 @@ const styles = StyleSheet.create({
     color: '#92400E',
     fontFamily: FONTS.display.medium,
   },
-  // Input area
   inputArea: {
     flexDirection: 'row',
     alignItems: 'flex-end',

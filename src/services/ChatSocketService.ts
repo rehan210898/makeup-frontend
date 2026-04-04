@@ -12,10 +12,17 @@ class ChatSocketService {
   private maxReconnectAttempts = 5;
 
   /**
-   * Connect to the chat server
+   * Connect to the chat server. Cleans up any stale socket first.
    */
   connect() {
     if (this.socket?.connected) return;
+
+    // Clean up stale socket to prevent duplicate listeners
+    if (this.socket) {
+      this.socket.removeAllListeners();
+      this.socket.disconnect();
+      this.socket = null;
+    }
 
     const token = useUserStore.getState().token;
     const user = useUserStore.getState().user;
@@ -33,12 +40,11 @@ class ChatSocketService {
       timeout: 10000,
     });
 
-    this.setupListeners();
-
     // Auto-join chat after connection
     this.socket.on('connect', () => {
-      if (__DEV__) console.log('💬 Chat socket connected');
+      if (__DEV__) console.log('Chat socket connected');
       useChatStore.getState().setConnected(true);
+      useChatStore.getState().setError(null);
       this.reconnectAttempts = 0;
 
       this.socket?.emit('chat:join', {
@@ -47,25 +53,26 @@ class ChatSocketService {
     });
 
     this.socket.on('disconnect', (reason) => {
-      if (__DEV__) console.log('💬 Chat socket disconnected:', reason);
+      if (__DEV__) console.log('Chat socket disconnected:', reason);
       useChatStore.getState().setConnected(false);
     });
 
     this.socket.on('connect_error', (error) => {
-      if (__DEV__) console.error('💬 Chat socket error:', error.message);
+      if (__DEV__) console.error('Chat socket error:', error.message);
       this.reconnectAttempts++;
       if (this.reconnectAttempts >= this.maxReconnectAttempts) {
         useChatStore.getState().setError('Unable to connect to chat. Please try again later.');
       }
     });
+
+    this.setupListeners();
   }
 
   /**
-   * Set up all event listeners
+   * Set up all chat event listeners (called once per connect)
    */
   private setupListeners() {
     if (!this.socket) return;
-    const store = useChatStore.getState;
 
     // Session joined — receive history
     this.socket.on('chat:joined', (data: {
@@ -73,13 +80,13 @@ class ChatSocketService {
       mode: string;
       history: ChatMessage[];
     }) => {
-      store().setSessionId(data.sessionId);
-      store().setMode(data.mode as 'AI' | 'HUMAN' | 'PENDING_HUMAN');
+      const store = useChatStore.getState();
+      store.setSessionId(data.sessionId);
+      store.setMode(data.mode as 'AI' | 'HUMAN' | 'PENDING_HUMAN');
       if (data.history && data.history.length > 0) {
-        store().setMessages(data.history);
-      } else {
-        // Add welcome message if no history
-        store().addMessage({
+        store.setMessages(data.history);
+      } else if (store.messages.length === 0) {
+        store.addMessage({
           id: 'welcome',
           role: 'assistant',
           content: "Hi! I'm Mia, your MakeupOcean beauty assistant. How can I help you today?",
@@ -89,9 +96,9 @@ class ChatSocketService {
       }
     });
 
-    // Complete AI message
+    // Complete AI message (sent after streaming is done)
     this.socket.on('chat:message', (msg: ChatMessage) => {
-      store().updateOrAddMessage(msg);
+      useChatStore.getState().finalizeMessage(msg);
     });
 
     // Streaming text chunks
@@ -100,33 +107,33 @@ class ChatSocketService {
       chunk: string;
       done: boolean;
     }) => {
+      const store = useChatStore.getState();
       if (data.done) {
-        store().setStreaming(false);
+        store.setStreaming(false);
         return;
       }
-      store().setStreaming(true);
-      store().appendToStream(data.id, data.chunk);
+      store.setStreaming(true);
+      store.setAiTyping(false); // stop typing dots once text starts streaming
+      store.appendToStream(data.id, data.chunk);
     });
 
     // AI typing indicator
     this.socket.on('chat:ai_typing', (data: { typing: boolean }) => {
-      store().setAiTyping(data.typing);
+      useChatStore.getState().setAiTyping(data.typing);
     });
 
     // Human agent typing
     this.socket.on('chat:agent_typing', () => {
-      store().setAiTyping(true);
-      // Auto-clear after 3s
-      setTimeout(() => store().setAiTyping(false), 3000);
+      const store = useChatStore.getState();
+      store.setAiTyping(true);
+      setTimeout(() => useChatStore.getState().setAiTyping(false), 3000);
     });
 
-    // Mode changed (AI ↔ Human)
-    this.socket.on('chat:mode_changed', (data: {
-      mode: string;
-      message: string;
-    }) => {
-      store().setMode(data.mode as 'AI' | 'HUMAN' | 'PENDING_HUMAN');
-      store().addMessage({
+    // Mode changed (AI <-> Human)
+    this.socket.on('chat:mode_changed', (data: { mode: string; message: string }) => {
+      const store = useChatStore.getState();
+      store.setMode(data.mode as 'AI' | 'HUMAN' | 'PENDING_HUMAN');
+      store.addMessage({
         id: `system-${Date.now()}`,
         role: 'system',
         content: data.message,
@@ -137,8 +144,9 @@ class ChatSocketService {
 
     // Human agent connected
     this.socket.on('chat:human_connected', (data: { message: string }) => {
-      store().setMode('HUMAN');
-      store().addMessage({
+      const store = useChatStore.getState();
+      store.setMode('HUMAN');
+      store.addMessage({
         id: `system-${Date.now()}`,
         role: 'system',
         content: data.message,
@@ -149,7 +157,7 @@ class ChatSocketService {
 
     // Status messages
     this.socket.on('chat:status', (data: { message: string }) => {
-      store().addMessage({
+      useChatStore.getState().addMessage({
         id: `status-${Date.now()}`,
         role: 'system',
         content: data.message,
@@ -160,12 +168,7 @@ class ChatSocketService {
 
     // Errors
     this.socket.on('chat:error', (data: { message: string }) => {
-      store().setError(data.message);
-    });
-
-    // Message acknowledged
-    this.socket.on('chat:message_ack', () => {
-      // No-op for now, could be used for read receipts
+      useChatStore.getState().setError(data.message);
     });
   }
 
@@ -179,36 +182,26 @@ class ChatSocketService {
       return;
     }
 
-    // Add user message to local store immediately
-    const userMsg: ChatMessage = {
+    // Add user message to local store immediately (optimistic)
+    useChatStore.getState().addMessage({
       id: `local-${Date.now()}`,
       role: 'user',
       content: message,
       timestamp: Date.now(),
       products: [],
-    };
-    useChatStore.getState().addMessage(userMsg);
+    });
 
     this.socket.emit('chat:message', { message });
   }
 
-  /**
-   * Request human support
-   */
   requestHuman(reason?: string) {
     this.socket?.emit('chat:request_human', { reason: reason || 'User requested human support' });
   }
 
-  /**
-   * Send typing indicator
-   */
   sendTyping() {
     this.socket?.emit('chat:typing');
   }
 
-  /**
-   * Disconnect from chat
-   */
   disconnect() {
     if (this.socket) {
       this.socket.removeAllListeners();
@@ -218,9 +211,6 @@ class ChatSocketService {
     useChatStore.getState().reset();
   }
 
-  /**
-   * Check if connected
-   */
   get isConnected(): boolean {
     return this.socket?.connected ?? false;
   }

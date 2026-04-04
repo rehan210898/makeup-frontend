@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BlurView } from 'expo-blur';
 import Animated, {
   useSharedValue,
@@ -10,7 +11,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { BottomTabParamList } from './types';
+import { BottomTabParamList, RootStackParamList } from './types';
 import { COLORS } from '../constants';
 import { FONTS } from '../constants/fonts';
 import { useCartStore } from '../store/cartStore';
@@ -109,13 +110,15 @@ const AnimatedCartBadge: React.FC<AnimatedCartBadgeProps> = ({ count }) => {
 };
 
 function ChatFAB() {
-  const navigation = useNavigation();
+  // Must use getParent() to access the Root stack navigator — Chat is a Root screen, not a Tab screen
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   return (
     <TouchableOpacity
       style={styles.chatFab}
       onPress={() => {
         haptic.light();
-        navigation.navigate('Chat');
+        navigation.getParent<NativeStackNavigationProp<RootStackParamList>>()?.navigate('Chat')
+          ?? navigation.navigate('Chat' as any);
       }}
       activeOpacity={0.85}
     >
