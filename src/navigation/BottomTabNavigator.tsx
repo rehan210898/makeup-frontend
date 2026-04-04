@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useNavigation } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import Animated, {
   useSharedValue,
@@ -107,10 +108,28 @@ const AnimatedCartBadge: React.FC<AnimatedCartBadgeProps> = ({ count }) => {
   );
 };
 
+function ChatFAB() {
+  const navigation = useNavigation();
+  return (
+    <TouchableOpacity
+      style={styles.chatFab}
+      onPress={() => {
+        haptic.light();
+        navigation.navigate('Chat');
+      }}
+      activeOpacity={0.85}
+    >
+      <Text style={styles.chatFabIcon}>{'💬'}</Text>
+    </TouchableOpacity>
+  );
+}
+
 export default function BottomTabNavigator() {
   const itemCount = useCartStore((state) => state.itemCount);
 
   return (
+    <>
+    <ChatFAB />
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
@@ -221,10 +240,31 @@ export default function BottomTabNavigator() {
         }}
       />
     </Tab.Navigator>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
+  chatFab: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 100 : 80,
+    right: 16,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  chatFabIcon: {
+    fontSize: 24,
+  },
   badge: {
     position: 'absolute',
     top: -8,

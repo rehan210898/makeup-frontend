@@ -26,6 +26,7 @@ export type RootStackParamList = {
   Address: undefined;
   EditProfile: undefined;
   ChangePassword: undefined;
+  Chat: undefined;
 };
 
 declare global {

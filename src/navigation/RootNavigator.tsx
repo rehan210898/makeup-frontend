@@ -25,6 +25,7 @@ const WishlistScreen = React.lazy(() => import('../screens/profile/WishlistScree
 const AddressScreen = React.lazy(() => import('../screens/profile/AddressScreen'));
 const EditProfileScreen = React.lazy(() => import('../screens/profile/EditProfileScreen'));
 const ChangePasswordScreen = React.lazy(() => import('../screens/profile/ChangePasswordScreen'));
+const ChatScreen = React.lazy(() => import('../screens/chat/ChatScreen'));
 
 function LazyFallback() {
   return (
@@ -56,6 +57,7 @@ const LazyWishlist = withSuspense(WishlistScreen);
 const LazyAddress = withSuspense(AddressScreen);
 const LazyEditProfile = withSuspense(EditProfileScreen);
 const LazyChangePassword = withSuspense(ChangePasswordScreen);
+const LazyChat = withSuspense(ChatScreen);
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -134,6 +136,11 @@ export default function RootNavigator() {
         <Stack.Screen name="Address" component={LazyAddress} />
         <Stack.Screen name="EditProfile" component={LazyEditProfile} />
         <Stack.Screen name="ChangePassword" component={LazyChangePassword} />
+        <Stack.Screen
+          name="Chat"
+          component={LazyChat}
+          options={{ animation: 'slide_from_bottom', animationDuration: 300 }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );
