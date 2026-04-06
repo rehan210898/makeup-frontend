@@ -1,5 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, TextInput } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Platform,
+  TextInput,
+  FlatList,
+  Dimensions,
+} from 'react-native';
 import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -10,17 +20,25 @@ import CartIcon from '../../components/icons/CartIcon';
 import SearchIcon from '../../components/icons/SearchIcon';
 import { FONTS } from '../../constants/fonts';
 import { CategoriesSkeleton } from '../../components/skeletons/CategoriesSkeleton';
-import layoutService, { CategoryLayoutItem } from '../../services/layoutService';
+import layoutService, { CategoryTreeItem, SubCategory } from '../../services/layoutService';
 import { getIconForCategory } from '../../components/icons/CategoryIcons';
 
 type CategoriesScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const TAB_WIDTH = 90;
+const CONTENT_WIDTH = SCREEN_WIDTH - TAB_WIDTH;
+const GRID_COLUMNS = 3;
+const GRID_ITEM_SIZE = (CONTENT_WIDTH - 48) / GRID_COLUMNS; // 48 = padding + gaps
+
 export default function CategoriesScreen() {
   const navigation = useNavigation<CategoriesScreenNavigationProp>();
-  const [categories, setCategories] = useState<CategoryLayoutItem[]>([]);
+  const [categoryTree, setCategoryTree] = useState<CategoryTreeItem[]>([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { itemCount } = useCartStore();
+  const tabScrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     loadCategories();
@@ -31,8 +49,9 @@ export default function CategoriesScreen() {
     setError('');
 
     try {
-      const data = await layoutService.getCategoryLayout();
-      setCategories(data || []);
+      const data = await layoutService.getCategoryTree();
+      setCategoryTree(data || []);
+      setSelectedIndex(0);
     } catch (err: any) {
       console.error('Error loading categories:', err);
       setError('Failed to load categories');
@@ -41,109 +60,215 @@ export default function CategoriesScreen() {
     }
   };
 
-  const handleCategoryPress = (category: CategoryLayoutItem) => {
-    if (category.parent && category.parent > 0) {
-      // It's a subcategory — find parent name from our list
-      const parentCat = categories.find(c => c.id === category.parent);
-      navigation.push('ProductList', {
-        categoryId: category.id,
-        categoryName: category.name,
-        parentCategoryId: category.parent,
-        parentCategoryName: parentCat?.name || undefined,
-      });
-    } else {
-      // It's a main category
-      navigation.push('ProductList', {
-        categoryId: category.id,
-        categoryName: category.name,
-      });
-    }
+  const handleTabPress = (index: number) => {
+    setSelectedIndex(index);
+    // Scroll tab into view
+    tabScrollRef.current?.scrollTo({
+      y: index * 96 - 100,
+      animated: true,
+    });
   };
+
+  const handleSubcategoryPress = (sub: SubCategory) => {
+    const mainCat = categoryTree[selectedIndex];
+    navigation.push('ProductList', {
+      categoryId: sub.id,
+      categoryName: sub.name,
+      parentCategoryId: mainCat.id,
+      parentCategoryName: mainCat.name,
+    });
+  };
+
+  const handleMainCategoryPress = (cat: CategoryTreeItem) => {
+    navigation.push('ProductList', {
+      categoryId: cat.id,
+      categoryName: cat.name,
+    });
+  };
+
+  const selectedCategory = categoryTree[selectedIndex];
+  const subcategories = selectedCategory?.subcategories || [];
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.searchContainer}>
-            <SearchIcon size={18} color={COLORS.text.muted} />
-            <TextInput
-                placeholder="Search products..."
-                placeholderTextColor={COLORS.text.muted}
-                style={styles.searchInput}
-                returnKeyType="search"
-                onSubmitEditing={(e) => navigation.push('ProductList', { search: e.nativeEvent.text })}
-            />
+          <SearchIcon size={18} color={COLORS.text.muted} />
+          <TextInput
+            placeholder="Search products..."
+            placeholderTextColor={COLORS.text.muted}
+            style={styles.searchInput}
+            returnKeyType="search"
+            onSubmitEditing={(e) =>
+              navigation.push('ProductList', { search: e.nativeEvent.text })
+            }
+          />
         </View>
 
-        <TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'CartTab' } as any)} style={styles.cartBtn}>
-            <CartIcon size={24} color={COLORS.primary} />
-            {itemCount > 0 && (
-                <View style={styles.cartBadge}>
-                    <Text style={styles.cartBadgeText}>{itemCount}</Text>
-                </View>
-            )}
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate('MainTabs', { screen: 'CartTab' } as any)
+          }
+          style={styles.cartBtn}
+        >
+          <CartIcon size={24} color={COLORS.primary} />
+          {itemCount > 0 && (
+            <View style={styles.cartBadge}>
+              <Text style={styles.cartBadgeText}>{itemCount}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {loading && (
-          <CategoriesSkeleton />
-        )}
+      {loading && <CategoriesSkeleton />}
 
-        {error && (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity
-              style={[styles.retryButton, { backgroundColor: COLORS.primary }]}
-              onPress={loadCategories}
-            >
-              <Text style={styles.retryButtonText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+      {error ? (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity
+            style={[styles.retryButton, { backgroundColor: COLORS.primary }]}
+            onPress={loadCategories}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
 
-        {!loading && !error && categories.length === 0 && (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No categories found</Text>
-          </View>
-        )}
+      {!loading && !error && categoryTree.length === 0 && (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No categories found</Text>
+        </View>
+      )}
 
-       {!loading && !error && categories.length > 0 && (
-          <View style={styles.categoriesGrid}>
-            {categories.map((category, index) => (
-              <TouchableOpacity
-                key={category.id}
-                style={styles.categoryCard}
-                activeOpacity={0.7}
-                onPress={() => handleCategoryPress(category)}
-              >
-                {category.image ? (
-                  <View style={[styles.imageContainer, { backgroundColor: COLORS.pastels[index % COLORS.pastels.length] }]}>
-                    <Image
-                      source={{ uri: category.image }}
-                      style={styles.categoryImage}
-                      contentFit="cover"
-                      transition={200}
-                      cachePolicy="memory-disk"
-                      recyclingKey={`cat-screen-${category.id}`}
-                    />
+      {!loading && !error && categoryTree.length > 0 && (
+        <View style={styles.body}>
+          {/* Left: Vertical Category Tabs */}
+          <ScrollView
+            ref={tabScrollRef}
+            style={styles.tabBar}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.tabBarContent}
+          >
+            {categoryTree.map((cat, index) => {
+              const isActive = index === selectedIndex;
+              return (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={[styles.tab, isActive && styles.tabActive]}
+                  activeOpacity={0.7}
+                  onPress={() => handleTabPress(index)}
+                >
+                  <View
+                    style={[
+                      styles.tabIconContainer,
+                      isActive && styles.tabIconContainerActive,
+                    ]}
+                  >
+                    {cat.image ? (
+                      <Image
+                        source={{ uri: cat.image }}
+                        style={styles.tabIcon}
+                        contentFit="cover"
+                        cachePolicy="memory-disk"
+                        recyclingKey={`tab-${cat.id}`}
+                      />
+                    ) : (
+                      getIconForCategory(cat.name, {
+                        size: 24,
+                        color: isActive ? COLORS.primary : COLORS.gray[500],
+                      })
+                    )}
                   </View>
-                ) : (
-                  <View style={[styles.categoryIconBox, { backgroundColor: COLORS.pastels[index % COLORS.pastels.length] }]}>
-                    {getIconForCategory(category.name, { size: 48, color: COLORS.primary })}
-                  </View>
-                )}
-
-                <View style={styles.categoryInfo}>
-                  <Text style={styles.categoryName} numberOfLines={2}>
-                    {category.name}
+                  <Text
+                    style={[
+                      styles.tabLabel,
+                      isActive && styles.tabLabelActive,
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {cat.name}
                   </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-      </ScrollView>
+                  {isActive && <View style={styles.tabIndicator} />}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          {/* Right: Subcategory Grid */}
+          <ScrollView
+            style={styles.contentArea}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.contentAreaInner}
+          >
+            {/* Main category header — tap to see all products */}
+            <TouchableOpacity
+              style={styles.mainCatHeader}
+              activeOpacity={0.7}
+              onPress={() => handleMainCategoryPress(selectedCategory)}
+            >
+              <Text style={styles.mainCatTitle}>{selectedCategory.name}</Text>
+              <Text style={styles.viewAllText}>View All &rsaquo;</Text>
+            </TouchableOpacity>
+
+            {subcategories.length === 0 ? (
+              <View style={styles.noSubContainer}>
+                <Text style={styles.noSubText}>
+                  No subcategories available
+                </Text>
+                <TouchableOpacity
+                  style={styles.browseAllBtn}
+                  onPress={() => handleMainCategoryPress(selectedCategory)}
+                >
+                  <Text style={styles.browseAllText}>
+                    Browse all {selectedCategory.name}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.subGrid}>
+                {subcategories.map((sub, index) => (
+                  <TouchableOpacity
+                    key={sub.id}
+                    style={styles.subItem}
+                    activeOpacity={0.7}
+                    onPress={() => handleSubcategoryPress(sub)}
+                  >
+                    <View
+                      style={[
+                        styles.subImageContainer,
+                        {
+                          backgroundColor:
+                            COLORS.pastels[index % COLORS.pastels.length],
+                        },
+                      ]}
+                    >
+                      {sub.image ? (
+                        <Image
+                          source={{ uri: sub.image }}
+                          style={styles.subImage}
+                          contentFit="cover"
+                          transition={200}
+                          cachePolicy="memory-disk"
+                          recyclingKey={`sub-${sub.id}`}
+                        />
+                      ) : (
+                        getIconForCategory(sub.name, {
+                          size: 32,
+                          color: COLORS.primary,
+                        })
+                      )}
+                    </View>
+                    <Text style={styles.subName} numberOfLines={2}>
+                      {sub.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      )}
     </View>
   );
 }
@@ -210,15 +335,12 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontFamily: FONTS.display.bold,
   },
-  content: {
-    padding: 15,
-    paddingBottom: 100,
-  },
   errorBox: {
     backgroundColor: '#FEE2E2',
     padding: 20,
     borderRadius: 10,
     alignItems: 'center',
+    margin: 20,
   },
   errorText: {
     color: COLORS.error,
@@ -235,64 +357,165 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   emptyContainer: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
     paddingTop: 60,
   },
   emptyText: {
     fontSize: 16,
     color: COLORS.gray[500],
   },
-  categoriesGrid: {
+
+  // ─── Body: Tab + Content ──────────────────
+  body: {
+    flex: 1,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -5,
   },
-  categoryCard: {
-    width: '31%',
-    margin: '1.15%',
-    borderRadius: 16,
-    backgroundColor: COLORS.white,
-    overflow: 'hidden',
-    marginBottom: 10,
+
+  // ─── Left Tab Bar ─────────────────────────
+  tabBar: {
+    width: TAB_WIDTH,
+    backgroundColor: COLORS.gray[50],
+    borderRightWidth: 1,
+    borderRightColor: COLORS.gray[200],
+  },
+  tabBarContent: {
+    paddingVertical: 8,
+  },
+  tab: {
     alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    position: 'relative',
   },
-  imageContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#F5F5F5',
+  tabActive: {
+    backgroundColor: COLORS.white,
+  },
+  tabIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.gray[100],
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    marginTop: 10,
+    marginBottom: 6,
   },
-  categoryImage: {
+  tabIconContainerActive: {
+    backgroundColor: COLORS.backgroundSubtle,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+  },
+  tabIcon: {
     width: '100%',
     height: '100%',
-    borderRadius: 40,
   },
-  categoryIconBox: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  tabLabel: {
+    fontSize: 10,
+    color: COLORS.gray[500],
+    textAlign: 'center',
+    fontFamily: FONTS.display.medium,
+    lineHeight: 13,
+  },
+  tabLabelActive: {
+    color: COLORS.primary,
+    fontFamily: FONTS.display.bold,
+  },
+  tabIndicator: {
+    position: 'absolute',
+    left: 0,
+    top: 8,
+    bottom: 8,
+    width: 3,
+    backgroundColor: COLORS.primary,
+    borderTopRightRadius: 3,
+    borderBottomRightRadius: 3,
+  },
+
+  // ─── Right Content Area ───────────────────
+  contentArea: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+  },
+  contentAreaInner: {
+    padding: 16,
+    paddingBottom: 100,
+  },
+  mainCatHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.gray[100],
+  },
+  mainCatTitle: {
+    fontSize: 18,
+    fontFamily: FONTS.display.bold,
+    color: COLORS.text.main,
+  },
+  viewAllText: {
+    fontSize: 13,
+    color: COLORS.primary,
+    fontFamily: FONTS.display.medium,
+  },
+
+  // ─── Subcategory Grid ─────────────────────
+  subGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -6,
+  },
+  subItem: {
+    width: `${100 / GRID_COLUMNS}%`,
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 6,
+  },
+  subImageContainer: {
+    width: GRID_ITEM_SIZE - 24,
+    height: GRID_ITEM_SIZE - 24,
+    borderRadius: (GRID_ITEM_SIZE - 24) / 2,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(212, 175, 55, 0.1)',
-    marginTop: 10,
+    overflow: 'hidden',
   },
-  categoryInfo: {
-    padding: 10,
-    alignItems: 'center',
-    borderTopWidth: 0,
-    borderTopColor: '#FAFAFA',
+  subImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: (GRID_ITEM_SIZE - 24) / 2,
   },
-  categoryName: {
-    fontSize: 12,
-    fontWeight: '600',
+  subName: {
+    marginTop: 8,
+    fontSize: 11,
     color: COLORS.text.main,
     textAlign: 'center',
-    lineHeight: 16,
-    height: 32,
+    fontFamily: FONTS.display.medium,
+    lineHeight: 14,
+    height: 28,
+  },
+
+  // ─── No Subcategories State ───────────────
+  noSubContainer: {
+    alignItems: 'center',
+    paddingTop: 40,
+  },
+  noSubText: {
+    fontSize: 14,
+    color: COLORS.gray[400],
+    marginBottom: 16,
+  },
+  browseAllBtn: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  browseAllText: {
+    color: COLORS.white,
+    fontSize: 14,
     fontFamily: FONTS.display.medium,
   },
 });

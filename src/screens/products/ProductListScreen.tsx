@@ -153,6 +153,16 @@ export default function ProductListScreen() {
     loadProducts(1, true);
   }, [activeCategoryId, activeSort]);
 
+  // Pre-load main categories and subcategories on mount so filter chips resolve labels
+  // and the filter modal is ready when opened
+  useEffect(() => {
+    loadMainCategories();
+    const parentCatId = selectedFilters['category']?.[0];
+    if (parentCatId) {
+      loadSubCategories(parentCatId);
+    }
+  }, []);
+
   useEffect(() => {
     if (attribute) loadAttributes();
   }, [attribute]);
@@ -386,11 +396,16 @@ export default function ProductListScreen() {
       if (activeSort === 'price_asc') { params.orderby = 'price'; params.order = 'asc'; }
       if (activeSort === 'price_desc') { params.orderby = 'price'; params.order = 'desc'; }
 
-      // Category filter: if subcategories selected, use only those (more specific)
-      // If only main category selected, use it (shows all products in that category tree)
+      // Category filter: when both parent and subcategory are selected, include both
+      // so WooCommerce returns products assigned to either level.
+      // If only main category selected, use it (shows all products in that category tree).
       const subCatIds = effectiveFilters['subcategory'] || [];
       const mainCatIds = effectiveFilters['category'] || [];
-      if (subCatIds.length > 0) {
+      if (subCatIds.length > 0 && mainCatIds.length > 0) {
+        // Combine parent + subcategory IDs (WooCommerce OR logic)
+        const allIds = [...new Set([...mainCatIds, ...subCatIds])];
+        params.category = allIds.join(',');
+      } else if (subCatIds.length > 0) {
         params.category = subCatIds.join(',');
       } else if (mainCatIds.length > 0) {
         params.category = mainCatIds.join(',');
