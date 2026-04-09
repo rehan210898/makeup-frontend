@@ -13,7 +13,6 @@ export const API_CONFIG = {
   BASE_URL,
   API_KEY: '5aa92e6b5a9c561fff47ea95c872fc9b5c52652735029cb9fdf271eb9fc1e4fa',
   TIMEOUT: 15000,
-  BOTPRESS_BOT_ID: '__BOTPRESS_BOT_ID_PLACEHOLDER__', // Replace with actual Botpress Bot ID
 };
 
 // Colors - Stitch UI Pink/Magenta Theme

@@ -1,12 +1,13 @@
 import React, { useMemo } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { API_CONFIG, COLORS } from '../../constants';
+import { COLORS } from '../../constants';
 import { useUserStore } from '../../store/userStore';
+import { useChatStore } from '../../store/chatStore';
 
 export default function BotpressWebView() {
   const user = useUserStore((s) => s.user);
-  const botId = API_CONFIG.BOTPRESS_BOT_ID;
+  const botId = useChatStore((s) => s.botpressBotId);
 
   const html = useMemo(() => {
     const userName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : '';
