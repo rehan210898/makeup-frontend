@@ -1,120 +1,101 @@
 import { create } from 'zustand';
+import api from '../services/api';
 
-export interface ChatProduct {
-  id: number;
-  name: string;
-  price: string;
-  regular_price: string;
-  sale_price: string | null;
-  on_sale: boolean;
-  in_stock: boolean;
-  description: string;
-  image: string | null;
-  rating: string | null;
-  category: string | null;
+export interface LiveChatMessage {
+  id: string;
+  role: 'user' | 'agent' | 'system';
+  content: string;
+  timestamp: string;
+  agentName?: string;
 }
 
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  timestamp: number;
-  products?: ChatProduct[];
-  isHuman?: boolean;
+export interface AdminChatSession {
+  sessionId: string;
+  userName: string;
+  userId: number | null;
+  lastMessage: string;
+  lastMessageTime: string;
+  hasAgent: boolean;
+  agentName: string | null;
+  messageCount: number;
+  createdAt: string;
+  disconnected: boolean;
 }
 
 interface ChatState {
+  // Botpress availability
+  botpressAvailable: boolean | null;
+  botpressBotId: string | null;
+
+  // Live chat state
   connected: boolean;
   sessionId: string | null;
+  agentConnected: boolean;
+  messages: LiveChatMessage[];
+  agentTyping: boolean;
   error: string | null;
-  mode: 'AI' | 'HUMAN' | 'PENDING_HUMAN';
-  messages: ChatMessage[];
-  aiTyping: boolean;
-  streaming: boolean;
 
+  // Admin state
+  activeSessions: AdminChatSession[];
+
+  // Actions
+  checkStatus: () => Promise<void>;
   setConnected: (connected: boolean) => void;
-  setSessionId: (id: string) => void;
-  setMode: (mode: 'AI' | 'HUMAN' | 'PENDING_HUMAN') => void;
-  setMessages: (messages: ChatMessage[]) => void;
-  addMessage: (message: ChatMessage) => void;
-  finalizeMessage: (message: ChatMessage) => void;
-  appendToStream: (id: string, chunk: string) => void;
-  setAiTyping: (typing: boolean) => void;
-  setStreaming: (streaming: boolean) => void;
+  setSessionId: (sessionId: string | null) => void;
+  setAgentConnected: (connected: boolean) => void;
+  addMessage: (msg: LiveChatMessage) => void;
+  setMessages: (messages: LiveChatMessage[]) => void;
+  setAgentTyping: (typing: boolean) => void;
   setError: (error: string | null) => void;
+  setActiveSessions: (sessions: AdminChatSession[]) => void;
   reset: () => void;
 }
 
-const initialState = {
+export const useChatStore = create<ChatState>((set) => ({
+  botpressAvailable: null,
+  botpressBotId: null,
   connected: false,
   sessionId: null,
+  agentConnected: false,
+  messages: [],
+  agentTyping: false,
   error: null,
-  mode: 'AI' as const,
-  messages: [] as ChatMessage[],
-  aiTyping: false,
-  streaming: false,
-};
+  activeSessions: [],
 
-export const useChatStore = create<ChatState>()((set) => ({
-  ...initialState,
+  checkStatus: async () => {
+    try {
+      const response = await api.get('/chat/status');
+      set({
+        botpressAvailable: response.data.botpressAvailable,
+        botpressBotId: response.data.botpressBotId,
+      });
+    } catch {
+      // If status check fails, default to live chat
+      set({ botpressAvailable: false });
+    }
+  },
 
   setConnected: (connected) => set({ connected }),
-
   setSessionId: (sessionId) => set({ sessionId }),
+  setAgentConnected: (agentConnected) => set({ agentConnected }),
 
-  setMode: (mode) => set({ mode }),
+  addMessage: (msg) =>
+    set((state) => ({
+      messages: [...state.messages, msg],
+    })),
 
   setMessages: (messages) => set({ messages }),
-
-  addMessage: (message) => set((state) => ({
-    messages: [...state.messages, message],
-    aiTyping: false,
-  })),
-
-  /**
-   * Replace a streamed message (same ID) with the final version from the server.
-   * The final version includes products[]. If no match by ID, add only if
-   * content doesn't duplicate an existing message.
-   */
-  finalizeMessage: (message) => set((state) => {
-    const idx = state.messages.findIndex(m => m.id === message.id);
-    if (idx !== -1) {
-      const updated = [...state.messages];
-      updated[idx] = message; // replace with full version (has products)
-      return { messages: updated };
-    }
-    // Avoid adding if same content already shown (dedup)
-    const dup = state.messages.some(
-      m => m.role === message.role && m.content === message.content &&
-           Math.abs(m.timestamp - message.timestamp) < 5000
-    );
-    if (dup) return state;
-    return { messages: [...state.messages, message] };
-  }),
-
-  appendToStream: (id, chunk) => set((state) => {
-    const idx = state.messages.findIndex(m => m.id === id);
-    if (idx !== -1) {
-      const updated = [...state.messages];
-      updated[idx] = { ...updated[idx], content: updated[idx].content + chunk };
-      return { messages: updated };
-    }
-    return {
-      messages: [...state.messages, {
-        id,
-        role: 'assistant' as const,
-        content: chunk,
-        timestamp: Date.now(),
-        products: [],
-      }],
-    };
-  }),
-
-  setAiTyping: (aiTyping) => set({ aiTyping }),
-
-  setStreaming: (streaming) => set({ streaming }),
-
+  setAgentTyping: (agentTyping) => set({ agentTyping }),
   setError: (error) => set({ error }),
+  setActiveSessions: (sessions) => set({ activeSessions: sessions }),
 
-  reset: () => set(initialState),
+  reset: () =>
+    set({
+      connected: false,
+      sessionId: null,
+      agentConnected: false,
+      messages: [],
+      agentTyping: false,
+      error: null,
+    }),
 }));

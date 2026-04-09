@@ -290,6 +290,7 @@ export interface User {
   lastName: string;
   username?: string;
   avatar?: string;
+  isAdmin?: boolean;
   billing?: BillingAddress;
   shipping?: ShippingAddress;
   savedAddresses?: SavedAddress[];

@@ -13,6 +13,9 @@ const SCREEN_MAP: Record<string, string> = {
   'OrderTracking': 'OrderTracking',
   'OrderHistory': 'OrderHistory',
   'Home': 'MainTabs',
+  'Chat': 'Chat',
+  'AdminChat': 'AdminChat',
+  'AdminConversation': 'AdminConversation',
 };
 
 export const useNotifications = () => {
@@ -58,7 +61,21 @@ export const useNotifications = () => {
       return;
     }
 
-    // Priority 3: Typed notification payloads (order updates, promotions)
+    // Priority 3: Live chat message notifications
+    if (data.type === 'LIVE_CHAT_MESSAGE') {
+      try {
+        if (data.screen === 'AdminConversation' && data.params?.sessionId) {
+          navigate('AdminConversation', { sessionId: data.params.sessionId, userName: data.params.userName || 'User' });
+        } else {
+          navigate('Chat', undefined);
+        }
+      } catch (navError) {
+        console.error('Navigation from chat notification failed:', navError);
+      }
+      return;
+    }
+
+    // Priority 4: Typed notification payloads (order updates, promotions)
     try {
       if (data.type === 'PROMOTION' && data.link) {
         try { Linking.openURL(Linking.createURL(data.link)); } catch (e) { console.error('Failed to open promotion link:', e); }

@@ -26,6 +26,8 @@ const AddressScreen = React.lazy(() => import('../screens/profile/AddressScreen'
 const EditProfileScreen = React.lazy(() => import('../screens/profile/EditProfileScreen'));
 const ChangePasswordScreen = React.lazy(() => import('../screens/profile/ChangePasswordScreen'));
 const ChatScreen = React.lazy(() => import('../screens/chat/ChatScreen'));
+const AdminChatScreen = React.lazy(() => import('../screens/chat/AdminChatScreen'));
+const AdminConversationScreen = React.lazy(() => import('../screens/chat/AdminConversationScreen'));
 
 function LazyFallback() {
   return (
@@ -58,6 +60,8 @@ const LazyAddress = withSuspense(AddressScreen);
 const LazyEditProfile = withSuspense(EditProfileScreen);
 const LazyChangePassword = withSuspense(ChangePasswordScreen);
 const LazyChat = withSuspense(ChatScreen);
+const LazyAdminChat = withSuspense(AdminChatScreen);
+const LazyAdminConversation = withSuspense(AdminConversationScreen);
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -140,6 +144,16 @@ export default function RootNavigator() {
           name="Chat"
           component={LazyChat}
           options={{ animation: 'slide_from_bottom', animationDuration: 300 }}
+        />
+        <Stack.Screen
+          name="AdminChat"
+          component={LazyAdminChat}
+          options={{ animation: 'slide_from_bottom', animationDuration: 300 }}
+        />
+        <Stack.Screen
+          name="AdminConversation"
+          component={LazyAdminConversation}
+          options={{ animation: 'slide_from_right' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

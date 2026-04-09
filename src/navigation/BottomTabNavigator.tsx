@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -15,7 +16,9 @@ import { BottomTabParamList, RootStackParamList } from './types';
 import { COLORS } from '../constants';
 import { FONTS } from '../constants/fonts';
 import { useCartStore } from '../store/cartStore';
+import { useUserStore } from '../store/userStore';
 import { haptic } from '../utils/haptics';
+import AdminChatFAB from '../components/chat/AdminChatFAB';
 
 // Screens
 import HomeScreen from '../screens/home/HomeScreen';
@@ -110,7 +113,6 @@ const AnimatedCartBadge: React.FC<AnimatedCartBadgeProps> = ({ count }) => {
 };
 
 function ChatFAB() {
-  // Must use getParent() to access the Root stack navigator — Chat is a Root screen, not a Tab screen
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   return (
     <TouchableOpacity
@@ -122,16 +124,18 @@ function ChatFAB() {
       }}
       activeOpacity={0.85}
     >
-      <Text style={styles.chatFabIcon}>{'💬'}</Text>
+      <Ionicons name="chatbubble-ellipses" size={24} color={COLORS.white} />
     </TouchableOpacity>
   );
 }
 
 export default function BottomTabNavigator() {
   const itemCount = useCartStore((state) => state.itemCount);
+  const isAdmin = useUserStore((s) => s.user?.isAdmin ?? false);
 
   return (
     <>
+    {isAdmin && <AdminChatFAB />}
     <ChatFAB />
     <Tab.Navigator
       screenOptions={{
@@ -264,9 +268,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
-  },
-  chatFabIcon: {
-    fontSize: 24,
   },
   badge: {
     position: 'absolute',

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Platform,
   TextInput,
-  FlatList,
   Dimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -23,77 +22,68 @@ import { CategoriesSkeleton } from '../../components/skeletons/CategoriesSkeleto
 import layoutService, { CategoryTreeItem, SubCategory } from '../../services/layoutService';
 import { getIconForCategory } from '../../components/icons/CategoryIcons';
 
-type CategoriesScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const TAB_WIDTH = 90;
-const CONTENT_WIDTH = SCREEN_WIDTH - TAB_WIDTH;
 const GRID_COLUMNS = 3;
-const GRID_ITEM_SIZE = (CONTENT_WIDTH - 48) / GRID_COLUMNS; // 48 = padding + gaps
+const GRID_PADDING = 32;
+const CIRCLE_SIZE = Math.floor((SCREEN_WIDTH - GRID_PADDING - 36) / GRID_COLUMNS);
+const TAB_ICON_SIZE = 44;
 
 export default function CategoriesScreen() {
-  const navigation = useNavigation<CategoriesScreenNavigationProp>();
-  const [categoryTree, setCategoryTree] = useState<CategoryTreeItem[]>([]);
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const navigation = useNavigation<Nav>();
+  const { itemCount } = useCartStore();
+
+  const [tree, setTree] = useState<CategoryTreeItem[]>([]);
+  const [activeIdx, setActiveIdx] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const { itemCount } = useCartStore();
+
   const tabScrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
-    loadCategories();
+    (async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const data = await layoutService.getCategoryTree();
+        setTree(data || []);
+        setActiveIdx(0);
+      } catch (e: any) {
+        console.error('Category load error:', e);
+        setError('Failed to load categories');
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
-  const loadCategories = async () => {
-    setLoading(true);
-    setError('');
+  const selectTab = useCallback((index: number) => {
+    setActiveIdx(index);
+    // Scroll so the selected tab is roughly centered
+    tabScrollRef.current?.scrollTo({ x: index * 80 - SCREEN_WIDTH / 2 + 40, animated: true });
+  }, []);
 
-    try {
-      const data = await layoutService.getCategoryTree();
-      setCategoryTree(data || []);
-      setSelectedIndex(0);
-    } catch (err: any) {
-      console.error('Error loading categories:', err);
-      setError('Failed to load categories');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const goToProducts = useCallback(
+    (catId: number, catName: string, parentId?: number, parentName?: string) => {
+      navigation.push('ProductList', {
+        categoryId: catId,
+        categoryName: catName,
+        parentCategoryId: parentId,
+        parentCategoryName: parentName,
+      });
+    },
+    [navigation],
+  );
 
-  const handleTabPress = (index: number) => {
-    setSelectedIndex(index);
-    // Scroll tab into view
-    tabScrollRef.current?.scrollTo({
-      y: index * 96 - 100,
-      animated: true,
-    });
-  };
-
-  const handleSubcategoryPress = (sub: SubCategory) => {
-    const mainCat = categoryTree[selectedIndex];
-    navigation.push('ProductList', {
-      categoryId: sub.id,
-      categoryName: sub.name,
-      parentCategoryId: mainCat.id,
-      parentCategoryName: mainCat.name,
-    });
-  };
-
-  const handleMainCategoryPress = (cat: CategoryTreeItem) => {
-    navigation.push('ProductList', {
-      categoryId: cat.id,
-      categoryName: cat.name,
-    });
-  };
-
-  const selectedCategory = categoryTree[selectedIndex];
-  const subcategories = selectedCategory?.subcategories || [];
+  const activeCat = tree[activeIdx];
+  const subs = activeCat?.subcategories ?? [];
 
   return (
-    <View style={styles.container}>
+    <View style={styles.screen}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.searchContainer}>
+        <View style={styles.searchBox}>
           <SearchIcon size={18} color={COLORS.text.muted} />
           <TextInput
             placeholder="Search products..."
@@ -105,11 +95,8 @@ export default function CategoriesScreen() {
             }
           />
         </View>
-
         <TouchableOpacity
-          onPress={() =>
-            navigation.navigate('MainTabs', { screen: 'CartTab' } as any)
-          }
+          onPress={() => navigation.navigate('MainTabs', { screen: 'CartTab' } as any)}
           style={styles.cartBtn}
         >
           <CartIcon size={24} color={COLORS.primary} />
@@ -121,145 +108,130 @@ export default function CategoriesScreen() {
         </TouchableOpacity>
       </View>
 
-      {loading && <CategoriesSkeleton />}
-
-      {error ? (
-        <View style={styles.errorBox}>
+      {/* Body */}
+      {loading ? (
+        <CategoriesSkeleton />
+      ) : error ? (
+        <View style={styles.centerWrap}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: COLORS.primary }]}
-            onPress={loadCategories}
+            style={styles.retryBtn}
+            onPress={() => {
+              setLoading(true);
+              setError('');
+              layoutService.getCategoryTree()
+                .then((d) => { setTree(d || []); setActiveIdx(0); })
+                .catch(() => setError('Failed to load categories'))
+                .finally(() => setLoading(false));
+            }}
           >
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
-      ) : null}
-
-      {!loading && !error && categoryTree.length === 0 && (
-        <View style={styles.emptyContainer}>
+      ) : tree.length === 0 ? (
+        <View style={styles.centerWrap}>
           <Text style={styles.emptyText}>No categories found</Text>
         </View>
-      )}
-
-      {!loading && !error && categoryTree.length > 0 && (
+      ) : (
         <View style={styles.body}>
-          {/* Left: Vertical Category Tabs */}
-          <ScrollView
-            ref={tabScrollRef}
-            style={styles.tabBar}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.tabBarContent}
-          >
-            {categoryTree.map((cat, index) => {
-              const isActive = index === selectedIndex;
-              return (
-                <TouchableOpacity
-                  key={cat.id}
-                  style={[styles.tab, isActive && styles.tabActive]}
-                  activeOpacity={0.7}
-                  onPress={() => handleTabPress(index)}
-                >
-                  <View
-                    style={[
-                      styles.tabIconContainer,
-                      isActive && styles.tabIconContainerActive,
-                    ]}
-                  >
-                    {cat.image ? (
-                      <Image
-                        source={{ uri: cat.image }}
-                        style={styles.tabIcon}
-                        contentFit="cover"
-                        cachePolicy="memory-disk"
-                        recyclingKey={`tab-${cat.id}`}
-                      />
-                    ) : (
-                      getIconForCategory(cat.name, {
-                        size: 24,
-                        color: isActive ? COLORS.primary : COLORS.gray[500],
-                      })
-                    )}
-                  </View>
-                  <Text
-                    style={[
-                      styles.tabLabel,
-                      isActive && styles.tabLabelActive,
-                    ]}
-                    numberOfLines={2}
-                  >
-                    {cat.name}
-                  </Text>
-                  {isActive && <View style={styles.tabIndicator} />}
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-
-          {/* Right: Subcategory Grid */}
-          <ScrollView
-            style={styles.contentArea}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.contentAreaInner}
-          >
-            {/* Main category header — tap to see all products */}
-            <TouchableOpacity
-              style={styles.mainCatHeader}
-              activeOpacity={0.7}
-              onPress={() => handleMainCategoryPress(selectedCategory)}
+          {/* ── Horizontal Category Tabs ── */}
+          <View style={styles.tabBarWrap}>
+            <ScrollView
+              ref={tabScrollRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.tabBarContent}
             >
-              <Text style={styles.mainCatTitle}>{selectedCategory.name}</Text>
-              <Text style={styles.viewAllText}>View All &rsaquo;</Text>
+              {tree.map((cat, index) => {
+                const active = index === activeIdx;
+                return (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={[styles.tab, active && styles.tabActive]}
+                    activeOpacity={0.7}
+                    onPress={() => selectTab(index)}
+                  >
+                    <View style={[styles.tabIconWrap, active && styles.tabIconWrapActive]}>
+                      {cat.image ? (
+                        <Image
+                          source={{ uri: cat.image }}
+                          style={styles.tabImg}
+                          contentFit="cover"
+                          cachePolicy="memory-disk"
+                        />
+                      ) : (
+                        getIconForCategory(cat.name, {
+                          size: 20,
+                          color: active ? COLORS.primary : COLORS.gray[500],
+                        })
+                      )}
+                    </View>
+                    <Text
+                      style={[styles.tabText, active && styles.tabTextActive]}
+                      numberOfLines={1}
+                    >
+                      {cat.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+
+          {/* ── Subcategory Grid ── */}
+          <ScrollView
+            style={styles.gridArea}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.gridContent}
+          >
+            {/* Category header */}
+            <TouchableOpacity
+              style={styles.catHeader}
+              activeOpacity={0.7}
+              onPress={() => goToProducts(activeCat.id, activeCat.name)}
+            >
+              <Text style={styles.catTitle}>{activeCat.name}</Text>
+              <Text style={styles.viewAll}>View All &rsaquo;</Text>
             </TouchableOpacity>
 
-            {subcategories.length === 0 ? (
-              <View style={styles.noSubContainer}>
-                <Text style={styles.noSubText}>
-                  No subcategories available
-                </Text>
+            {subs.length === 0 ? (
+              <View style={styles.emptySubWrap}>
+                <Text style={styles.emptySubText}>No subcategories available</Text>
                 <TouchableOpacity
-                  style={styles.browseAllBtn}
-                  onPress={() => handleMainCategoryPress(selectedCategory)}
+                  style={styles.browseBtn}
+                  onPress={() => goToProducts(activeCat.id, activeCat.name)}
                 >
-                  <Text style={styles.browseAllText}>
-                    Browse all {selectedCategory.name}
-                  </Text>
+                  <Text style={styles.browseBtnText}>Browse all {activeCat.name}</Text>
                 </TouchableOpacity>
               </View>
             ) : (
               <View style={styles.subGrid}>
-                {subcategories.map((sub, index) => (
+                {subs.map((sub, idx) => (
                   <TouchableOpacity
-                    key={sub.id}
+                    key={`${activeIdx}-${sub.id}`}
                     style={styles.subItem}
                     activeOpacity={0.7}
-                    onPress={() => handleSubcategoryPress(sub)}
+                    onPress={() => goToProducts(sub.id, sub.name, activeCat.id, activeCat.name)}
                   >
                     <View
                       style={[
-                        styles.subImageContainer,
-                        {
-                          backgroundColor:
-                            COLORS.pastels[index % COLORS.pastels.length],
-                        },
+                        styles.subCircle,
+                        { backgroundColor: COLORS.pastels[idx % COLORS.pastels.length] },
                       ]}
                     >
                       {sub.image ? (
                         <Image
                           source={{ uri: sub.image }}
-                          style={styles.subImage}
+                          style={styles.subImg}
                           contentFit="cover"
-                          transition={200}
                           cachePolicy="memory-disk"
-                          recyclingKey={`sub-${sub.id}`}
+                          transition={150}
                         />
                       ) : (
-                        getIconForCategory(sub.name, {
-                          size: 32,
-                          color: COLORS.primary,
-                        })
+                        getIconForCategory(sub.name, { size: 28, color: COLORS.primary })
                       )}
                     </View>
-                    <Text style={styles.subName} numberOfLines={2}>
+                    <Text style={styles.subText} numberOfLines={2}>
                       {sub.name}
                     </Text>
                   </TouchableOpacity>
@@ -274,30 +246,27 @@ export default function CategoriesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-  },
+  screen: { flex: 1, backgroundColor: COLORS.white },
+
+  // Header
   header: {
     paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 15,
-    paddingHorizontal: 20,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.05)',
-    zIndex: 100,
   },
-  searchContainer: {
+  searchBox: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.backgroundSubtle,
     borderRadius: 25,
-    paddingHorizontal: 16,
-    height: 44,
+    paddingHorizontal: 14,
+    height: 42,
     marginRight: 10,
   },
   searchInput: {
@@ -308,186 +277,118 @@ const styles = StyleSheet.create({
     padding: 0,
     fontFamily: FONTS.display.medium,
   },
-  cartBtn: {
-    position: 'relative',
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  cartBtn: { position: 'relative', width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
   cartBadge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    backgroundColor: COLORS.primary,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 2,
-    borderWidth: 1.5,
-    borderColor: COLORS.white,
-    zIndex: 10,
+    position: 'absolute', top: 0, right: 0,
+    backgroundColor: COLORS.primary, minWidth: 16, height: 16, borderRadius: 8,
+    justifyContent: 'center', alignItems: 'center', paddingHorizontal: 2,
+    borderWidth: 1.5, borderColor: COLORS.white,
   },
-  cartBadgeText: {
-    color: COLORS.white,
-    fontSize: 9,
-    fontFamily: FONTS.display.bold,
-  },
-  errorBox: {
-    backgroundColor: '#FEE2E2',
-    padding: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    margin: 20,
-  },
-  errorText: {
-    color: COLORS.error,
-    fontSize: 14,
-    marginBottom: 10,
-  },
-  retryButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: COLORS.white,
-    fontWeight: '600',
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 60,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: COLORS.gray[500],
-  },
+  cartBadgeText: { color: COLORS.white, fontSize: 9, fontFamily: FONTS.display.bold },
 
-  // ─── Body: Tab + Content ──────────────────
-  body: {
-    flex: 1,
-    flexDirection: 'row',
-  },
+  // Center states
+  centerWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
+  errorText: { color: COLORS.error, fontSize: 14, marginBottom: 12 },
+  retryBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8 },
+  retryText: { color: COLORS.white, fontWeight: '600', fontSize: 14 },
+  emptyText: { fontSize: 16, color: COLORS.gray[500] },
 
-  // ─── Left Tab Bar ─────────────────────────
-  tabBar: {
-    width: TAB_WIDTH,
-    backgroundColor: COLORS.gray[50],
-    borderRightWidth: 1,
-    borderRightColor: COLORS.gray[200],
+  // Body — vertical stack: tabs on top, grid below
+  body: { flex: 1 },
+
+  // ── Horizontal Tab Bar ──
+  tabBarWrap: {
+    backgroundColor: COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.gray[200],
   },
   tabBarContent: {
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 6,
   },
   tab: {
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    position: 'relative',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    width: 80,
   },
   tabActive: {
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.backgroundSubtle,
   },
-  tabIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  tabIconWrap: {
+    width: TAB_ICON_SIZE,
+    height: TAB_ICON_SIZE,
+    borderRadius: TAB_ICON_SIZE / 2,
     backgroundColor: COLORS.gray[100],
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    marginBottom: 6,
+    marginBottom: 4,
   },
-  tabIconContainerActive: {
-    backgroundColor: COLORS.backgroundSubtle,
+  tabIconWrapActive: {
     borderWidth: 2,
     borderColor: COLORS.primary,
+    backgroundColor: COLORS.white,
   },
-  tabIcon: {
-    width: '100%',
-    height: '100%',
+  tabImg: {
+    width: TAB_ICON_SIZE,
+    height: TAB_ICON_SIZE,
+    borderRadius: TAB_ICON_SIZE / 2,
   },
-  tabLabel: {
+  tabText: {
     fontSize: 10,
-    color: COLORS.gray[500],
+    color: COLORS.gray[600],
     textAlign: 'center',
     fontFamily: FONTS.display.medium,
     lineHeight: 13,
   },
-  tabLabelActive: {
+  tabTextActive: {
     color: COLORS.primary,
     fontFamily: FONTS.display.bold,
   },
-  tabIndicator: {
-    position: 'absolute',
-    left: 0,
-    top: 8,
-    bottom: 8,
-    width: 3,
-    backgroundColor: COLORS.primary,
-    borderTopRightRadius: 3,
-    borderBottomRightRadius: 3,
-  },
 
-  // ─── Right Content Area ───────────────────
-  contentArea: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-  },
-  contentAreaInner: {
-    padding: 16,
-    paddingBottom: 100,
-  },
-  mainCatHeader: {
+  // ── Subcategory grid area ──
+  gridArea: { flex: 1, backgroundColor: COLORS.white },
+  gridContent: { paddingHorizontal: 16, paddingBottom: 100 },
+
+  catHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
-    paddingBottom: 12,
+    paddingVertical: 14,
+    marginBottom: 4,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.gray[100],
   },
-  mainCatTitle: {
-    fontSize: 18,
-    fontFamily: FONTS.display.bold,
-    color: COLORS.text.main,
-  },
-  viewAllText: {
-    fontSize: 13,
-    color: COLORS.primary,
-    fontFamily: FONTS.display.medium,
-  },
+  catTitle: { fontSize: 17, fontFamily: FONTS.display.bold, color: COLORS.text.main },
+  viewAll: { fontSize: 13, color: COLORS.primary, fontFamily: FONTS.display.medium },
 
-  // ─── Subcategory Grid ─────────────────────
   subGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginHorizontal: -6,
+    marginTop: 8,
   },
   subItem: {
-    width: `${100 / GRID_COLUMNS}%`,
+    width: (SCREEN_WIDTH - GRID_PADDING) / GRID_COLUMNS,
     alignItems: 'center',
     marginBottom: 20,
-    paddingHorizontal: 6,
   },
-  subImageContainer: {
-    width: GRID_ITEM_SIZE - 24,
-    height: GRID_ITEM_SIZE - 24,
-    borderRadius: (GRID_ITEM_SIZE - 24) / 2,
+  subCircle: {
+    width: CIRCLE_SIZE,
+    height: CIRCLE_SIZE,
+    borderRadius: CIRCLE_SIZE / 2,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
   },
-  subImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: (GRID_ITEM_SIZE - 24) / 2,
+  subImg: {
+    width: CIRCLE_SIZE,
+    height: CIRCLE_SIZE,
+    borderRadius: CIRCLE_SIZE / 2,
   },
-  subName: {
+  subText: {
     marginTop: 8,
     fontSize: 11,
     color: COLORS.text.main,
@@ -495,27 +396,11 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.display.medium,
     lineHeight: 14,
     height: 28,
+    maxWidth: CIRCLE_SIZE + 10,
   },
 
-  // ─── No Subcategories State ───────────────
-  noSubContainer: {
-    alignItems: 'center',
-    paddingTop: 40,
-  },
-  noSubText: {
-    fontSize: 14,
-    color: COLORS.gray[400],
-    marginBottom: 16,
-  },
-  browseAllBtn: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  browseAllText: {
-    color: COLORS.white,
-    fontSize: 14,
-    fontFamily: FONTS.display.medium,
-  },
+  emptySubWrap: { alignItems: 'center', paddingTop: 50 },
+  emptySubText: { fontSize: 14, color: COLORS.gray[400], marginBottom: 16 },
+  browseBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
+  browseBtnText: { color: COLORS.white, fontSize: 14, fontFamily: FONTS.display.medium },
 });

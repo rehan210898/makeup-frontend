@@ -27,6 +27,8 @@ export type RootStackParamList = {
   EditProfile: undefined;
   ChangePassword: undefined;
   Chat: undefined;
+  AdminChat: undefined;
+  AdminConversation: { sessionId: string; userName: string };
 };
 
 declare global {
