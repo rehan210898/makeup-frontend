@@ -6,6 +6,7 @@ import { useChatStore, LiveChatMessage } from '../store/chatStore';
 class LiveChatSocketService {
   private socket: Socket | null = null;
   private static instance: LiveChatSocketService;
+  private pendingJoin: { userName: string; userId?: number } | null = null;
 
   static getInstance(): LiveChatSocketService {
     if (!LiveChatSocketService.instance) {
@@ -47,6 +48,11 @@ class LiveChatSocketService {
       const existingSessionId = useChatStore.getState().sessionId;
       if (existingSessionId) {
         this.reconnectChat(existingSessionId);
+      } else if (this.pendingJoin) {
+        // Execute queued join that was called before socket connected
+        const { userName, userId } = this.pendingJoin;
+        this.pendingJoin = null;
+        this.socket?.emit('livechat:join', { userName, userId });
       }
     });
 
@@ -109,7 +115,11 @@ class LiveChatSocketService {
   }
 
   joinChat(userName: string, userId?: number): void {
-    if (!this.socket?.connected) return;
+    if (!this.socket?.connected) {
+      // Queue the join to execute when socket connects
+      this.pendingJoin = { userName, userId };
+      return;
+    }
     this.socket.emit('livechat:join', { userName, userId });
   }
 
@@ -138,6 +148,7 @@ class LiveChatSocketService {
   }
 
   disconnect(): void {
+    this.pendingJoin = null;
     if (this.socket) {
       this.socket.removeAllListeners();
       this.socket.disconnect();

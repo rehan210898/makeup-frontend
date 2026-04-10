@@ -30,16 +30,13 @@ export default function LiveChatView() {
   useEffect(() => {
     socketService.connect();
 
-    // If we don't have an existing session, join a new one after connection
-    const joinTimeout = setTimeout(() => {
-      if (!useChatStore.getState().sessionId) {
-        const userName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Guest' : 'Guest';
-        socketService.joinChat(userName, user?.id);
-      }
-    }, 500);
+    // Join chat — if socket isn't connected yet, the service queues it
+    if (!useChatStore.getState().sessionId) {
+      const userName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Guest' : 'Guest';
+      socketService.joinChat(userName, user?.id);
+    }
 
     return () => {
-      clearTimeout(joinTimeout);
       socketService.disconnect();
     };
   }, []);
